@@ -1,0 +1,391 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description:
+globs:
+alwaysApply: false
+---
+
+# Uniform React Next App Router Developer Reference
+
+This document details how to use Uniform with React.js with Next App Router.
+
+@uniform.mdc describes general Uniform principles and practices.
+@uniform-sdk.mdc describes framework-agnostic developer principles.
+
+### Required npm packages
+
+The following npm packages must be installed to wire Uniform to Next App Router:
+
+@uniformdev/canvas-next-rsc
+@uniformdev/canvas
+
+### Uniform server config
+
+A file names `uniform.server.config.js` should exist in the root of the Next.js project with the following content:
+
+```js
+/** @type {import('@uniformdev/canvas-next-rsc/config').UniformServerConfig} */
+module.exports = {
+  defaultConsent: true,
+  evaluation: {
+    personalization: "hybrid",
+  },
+  experimental: {
+    quirkSerialization: true,
+  },
+};
+```
+
+### Enable Uniform server config
+
+To make the configuration available in Next.js, modify the next.config.js file in the root of the project and add in `withUniformConfig`:
+
+```js
+const { withUniformConfig } = require("@uniformdev/canvas-next-rsc/config");
+
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+};
+
+module.exports = withUniformConfig(nextConfig);
+```
+
+### Fetching and rendering the composition
+
+In your dynamic route file (`app/[[...path]]/page.{tsx|jsx}`), it is necessary to fetch the Uniform composition instance for the current route.
+
+```tsx
+import {
+  UniformComposition,
+  PageParameters,
+  retrieveRoute,
+} from "@uniformdev/canvas-next-rsc";
+import { resolveComponent } from "@/uniform/resolve";
+
+export default async function Page(props: PageParameters) {
+  const route = await retrieveRoute(props);
+  return (
+    <>
+      <UniformComposition
+        {...props}
+        route={route}
+        resolveComponent={resolveComponent}
+        mode="server"
+      />
+    </>
+  );
+}
+```
+
+### Wrapping page in Uniform Context
+
+In order for personalization and A/B testing functionality to work client side, we must wrap the entire page in the UniformContext component. This should modify `app/layout.tsx` and wrap `{children}`.
+
+```tsx
+import { UniformContext } from "@uniformdev/canvas-next-rsc";
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <body>
+        <main className="main">
+          <UniformContext>{children}</UniformContext>
+        </main>
+      </body>
+    </html>
+  );
+}
+```
+
+### Rendering Uniform Components using React Components
+
+The `UniformComposition` component needs to know how to map a Uniform Component instance's `type` to a React component that implements the UI for that component. This is done using resolveComponent. To use the component registry, first create a component:
+
+```tsx
+export const HeaderComponent = () => {
+  return <>Header</>;
+};
+```
+
+Then register it in the resolveComponent function:
+
+```tsx
+import {
+  DefaultNotImplementedComponent,
+  ResolveComponentFunction,
+  ResolveComponentResult,
+} from "@uniformdev/canvas-next-rsc/component";
+import { HeaderComponent } from "@/components/header";
+
+export const resolveComponent: ResolveComponentFunction = ({ component }) => {
+  let result: ResolveComponentResult = {
+    component: DefaultNotImplementedComponent,
+  };
+
+  if (component.type === "header") {
+    result = {
+      component: HeaderComponent,
+    };
+  }
+
+  return result;
+};
+```
+
+#### Mapping Uniform Components to React Components
+
+React components that receive Uniform Component data are passed props that correspond to the shape of the component definition they render. The `ComponentProps` type can be used to make the mapping explicit:
+
+```tsx
+import { ComponentProps } from "@uniformdev/canvas-next-rsc/component";
+import {
+  AssetParamValue,
+  LinkParamValue,
+  RichTextParamValue,
+} from "@uniformdev/canvas";
+
+type HeaderParameters = {
+  textParameter?: string;
+  richTextParameter?: RichTextParamValue;
+  linkParameter?: LinkParamValue;
+  assetParameter?: AssetParamValue;
+  // it is critical that all parameter props values are optional, because they can be undefined - even if 'required' on the component definition
+};
+
+type HeaderProps = ComponentProps<HeaderParameters>;
+
+export const HeaderComponent = ({ textParameter }: HeaderProps) => {
+  return (
+    <>
+      <span>{textParameter}</span>
+    </>
+  );
+};
+```
+
+#### Accessing parameters
+
+IMPORTANT: When accessing component parameters, never use this way of accessing parameter values: `component?.parameters?.<parameter_name>.value`. While it works, there is a better way of destructuring the parameter name on props and accessing it directly as shown in the example below:
+
+```tsx
+import {
+  ComponentProps,
+  UniformText,
+} from "@uniformdev/canvas-next-rsc/component";
+
+import {
+  LinkParamValue,
+} from "@uniformdev/canvas";
+
+type ComponentParameters = {
+  icon?: string;
+  label?: string;
+  link?: LinkParamValue;
+};
+
+export const ComponentName = ({
+  link,
+  icon,
+  label,
+  component,
+  context,
+}: ComponentProps<ComponentParameters>) => {
+  return (
+    <a href={link.path} aria-label={label}>
+      {icon}
+    </a>
+  );
+};
+```
+
+#### Rendering child slots
+
+If a Uniform Component definition has slots defined, the components in those slots can be rendered using the `UniformSlot` component.
+
+```tsx
+import {
+  ComponentProps,
+  UniformSlot,
+} from "@uniformdev/canvas-next-rsc/component";
+import { RichTextParamValue } from "@uniformdev/canvas";
+
+type HeaderParameters = {
+  textParameter?: string;
+  richTextParameter?: RichTextParamValue;
+  // it is critical that all parameter props values are optional, because they can be undefined - even if 'required' on the component definition
+};
+type HeaderSlots = "logo" | "navigation";
+
+type HeaderProps = ComponentProps<HeaderParameters, HeaderSlots>;
+
+export const HeaderComponent = ({ slots, context, component }: HeaderProps) => {
+  return (
+    <>
+      <UniformSlot context={context} data={component} slot={slots.logo} />
+      <UniformSlot context={context} data={component} slot={slots.navigation} />
+    </>
+  );
+};
+```
+
+#### Rendering parameter values
+
+When rendering a `text` type parameter, using the `UniformText` component will enable authors to edit the value within the Uniform preview directly. Text parameters that do not have a visible component, such as alt text, should be rendered as their raw text value:
+
+```tsx
+import {
+  ComponentProps,
+  UniformText,
+} from "@uniformdev/canvas-next-rsc/component";
+import { RichTextParamValue } from "@uniformdev/canvas";
+
+type HeaderParameters = {
+  textParameter?: string;
+  richTextParameter?: RichTextParamValue;
+  // it is critical that all parameter props values are optional, because they can be undefined - even if 'required' on the component definition
+};
+
+type HeaderProps = ComponentProps<HeaderParameters>;
+
+export const HeaderComponent = ({ component, context }: HeaderProps) => {
+  return (
+    <>
+      <UniformText
+        component={component}
+        context={context}
+        parameterId="textParameter"
+        as="h1"
+      />
+    </>
+  );
+};
+```
+
+For rich text parameters, the `UniformRichText` component will automatically render the rich text stored as JSON to HTML:
+
+```tsx
+import {
+  ComponentProps,
+  UniformRichText,
+} from "@uniformdev/canvas-next-rsc/component";
+import { RichTextParamValue } from "@uniformdev/canvas";
+
+type HeaderParameters = {
+  textParameter?: string;
+  richTextParameter?: RichTextParamValue;
+  // it is critical that all parameter props values are optional, because they can be undefined - even if 'required' on the component definition
+};
+
+type HeaderProps = ComponentProps<HeaderParameters>;
+
+export const HeaderComponent = ({ component, context }: HeaderProps) => {
+  return (
+    <>
+      <UniformRichText
+        component={component}
+        context={context}
+        parameterId="richTextParameter"
+      />
+    </>
+  );
+};
+```
+
+Note: asset parameters are rendered directly from props, there is no `UniformAsset` component.
+
+##### Asset parameters/fields
+
+1. CRITICAL: Always use `flattenValues` from `@uniformdev/canvas` for handling asset parameters, not custom utility functions.
+2. CRITICAL: Destructure asset parameters directly from component props (e.g., `{ logos, component, context }`) rather than accessing through `component?.parameters?.parameterName`.
+3. Use `flattenValues(assetParam)` directly - it handles both single and multiple assets automatically.
+
+```tsx
+import { AssetParamValue, flattenValues } from "@uniformdev/canvas";
+
+interface MyComponentProps {
+  multipleImagesAssetParam: AssetParamValue;
+  singleImageAssetParam: AssetParamValue;
+}
+
+function MyComponent({
+  multipleImagesAssetParam,
+  singleImageAssetParam,
+}: MyComponentProps) {
+  // when multiple assets are allowed, flatten to an array
+  const images = flattenValues(multipleImagesAssetParam);
+  // when only one asset is allowed, flatten to a single object
+  const image = flattenValues(singleImageAssetParam, { toSingle: true });
+
+  return (
+    <>
+      {images?.map((img, index) => (
+        <img
+          key={index}
+          src={img?.url}
+          width={img?.width}
+          height={img?.height}
+        />
+      ))}
+      <img src={image?.url} width={image?.width} height={image?.height} />
+    </>
+  );
+}
+```
+
+4. Do NOT create custom utility functions like `getAssetValues` when `flattenValues` already exists and works perfectly.
+
+### Configuring Contextual Editing Live Preview
+
+To enable contextual editing and live preview to operate within the Uniform application, we need to register a _preview handler_ and _playground page_. The preview handler is an API endpoint that Uniform invokes when preview starts. It is responsible for mapping the composition ID under preview to a redirect to the correct frontend route to display that composition. The default handler does this using project map hierarchy.
+
+`app/api/preview/route.ts`:
+
+```tsx
+import {
+  createPreviewGETRouteHandler,
+  createPreviewPOSTRouteHandler,
+  createPreviewOPTIONSRouteHandler,
+} from "@uniformdev/canvas-next-rsc/handler";
+
+export const GET = createPreviewGETRouteHandler({
+  playgroundPath: "/playground",
+  resolveFullPath: ({ path }) => (path ? path : "/playground"),
+});
+export const POST = createPreviewPOSTRouteHandler();
+export const OPTIONS = createPreviewOPTIONSRouteHandler();
+```
+
+The preview playground is a special route used to preview Uniform Patterns (reusable chunks of a page). It should use the same resolveComponent function. The playground route includes the global page shell of the application:
+
+`app/playground/page.tsx`:
+
+```tsx
+import {
+  UniformPlayground,
+  UniformPlaygroundProps,
+} from "@uniformdev/canvas-next-rsc";
+import { resolveComponent } from "@/uniform/resolve";
+
+export default function PlaygroundPage(props: {
+  searchParams: UniformPlaygroundProps["searchParams"];
+}) {
+  return <UniformPlayground {...props} resolveComponent={resolveComponent} />;
+}
+```
+
+## Uniform manifest usage
+
+1. CRITICAL! If using Next.js App Router, you must ignore adding the following commands specific to Uniform manifest. This is for Next.js page router only.
+```bash
+  "uniform:manifest": "uniform context manifest download --output ./lib/uniform/contextManifest.json",
+  "uniform:publish": "uniform context manifest publish"
+```
