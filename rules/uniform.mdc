@@ -179,6 +179,7 @@ Exhaustive list of allowed field/parameter types:
 
 The following Uniform features cannot currently be changed using MCP/AI. If asked to perform the following actions, explain you cannot yet do that, and when possible offer a link to perform the task in the Uniform web app.
 
+- Interacting with slot sections (adding, removing, manipulating components within)
 - Adding, editing, or removing block type fields/parameters, or block type definitions
 - Setting the value of asset or reference type fields/parameters
 - Editing conditional values on parameters or fields (the default value can be edited)
