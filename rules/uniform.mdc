@@ -26,7 +26,7 @@ Uniform Components are used to allow CMS authors to create and manipulate visual
 
 Uniform Components can define named _slots_.
 
-- A slot allows additional components to be inserted within the Uniform Component. For example an accordion component could have an 'items' slot that allows adding Accordion Item components.
+- A slot allows additional components (or component patterns) to be inserted within the Uniform Component. For example an accordion component could have an 'items' slot that allows adding Accordion Item components.
 - Each named slot has 0..n child components. The order in the slot determines the order of rendering.
 - Each slot definition allows only specific Uniform Components to be placed within it (by public id). It can also define the minimum and maximum number of components allowed.
 - Components allowed within slots can also have their own slots, with no depth limit - but it is generally undesirable to nest more than 2-3 levels deep to improve author understanding.
@@ -49,6 +49,29 @@ Uniform Slot Definition attributes:
 
 In technical terms, a Uniform Component maps directly to a presentational frontend component such as a React component. The parameters are component props. Slots are component props that contain rendered child components.
 
+#### Determining which Uniform Components or Component Patterns are allowed in a Slot
+
+In Uniform, slot definitions control which components or component patterns can be placed in a slot. This is governed by a combination of properties that make slot configuration both powerful and flexible.
+
+Here's how it works:
+
+1. `allowAllComponents: true`: If this is set, any component or component pattern can be added to the slot - no restrictions.
+2. `allowAllComponents: false`: If this is provided, `allowedComponents` is a list of allowed Uniform component public IDs. You can also include component patterns by using the prefix `$p:` followed by the pattern UUID.
+Example:
+`["hero", "callToAction", "$p:00000000-0000-0000-0000-000000000000"]`
+3. `patternsInAllowedComponents` This controls how component patterns are validated against `allowedComponents`.
+    * If `true`: A pattern is only allowed if it is explicitly listed in allowedComponents (with the `$p:` prefix).
+        Example: 
+        `["hero", "$p:00000000-0000-0000-0000-000000000000"]`
+        Only the listed pattern and `hero` components are allowed - no other patterns based on `hero` are valid.
+    * If `false`: a pattern is allowed if its base component type is listed in `allowedComponents`.
+        Example: 
+        `["hero"]` -> `hero` 
+        All `hero` components and any pattern based on `hero` are allowed.
+
+IMPORTANT: Before you add new components to a slot, make sure that they are allowed according to the preceding rules.
+IMPORTANT: If you change `patternsInAllowedComponents` to false, remove any existing pattern IDs in the allowed list.
+
 ### Uniform Content Types
 
 Uniform Content Types define a reusable structure for individual reusable pieces of content. A Uniform content type differs from a Uniform component because a component represents a specific visual element on a composition/page, but a content type is an abstract, reusable content schema. An instance of a Uniform Content Type is called an _Entry_. Entries each have their own built-in slug: there is no need to define an explicit slug field.
@@ -65,11 +88,23 @@ Uniform Content Type attributes:
 
 ### Uniform Patterns
 
-Patterns allow reusing the same content across compositions. The simplest way to think of a pattern is that it is a _shared component instance_ that can be placed within a slot to insert the pattern's content there. The pattern, like any other component instance, can have values in its parameters and child components in its slots. All usages of the same pattern reference the same shared content. Updates made to patterns are immediately reflected to all usages. Patterns may be nested within each other (e.g. a Blog Post Hero pattern could include a Author Bio pattern in one of its slots). Nesting beyond 2-3 levels can cause performance issues.
+Patterns are a unit of content reuse within Uniform. Updates made to patterns are immediately reflected to all usages of the pattern. There are several types of patterns:
+
+#### Uniform Component Patterns
+
+Component Patterns allow reusing the same content across compositions. The simplest way to think of a pattern is that it is a _shared component instance_ that can be placed within a slot to insert the pattern's content there. The pattern, like any other component instance, can have values in its parameters and child components in its slots. All usages of the same pattern reference the same shared content. Component Patterns may be nested within each other (e.g. a Blog Post Hero pattern could include a Author Bio pattern in one of its slots). Nesting beyond 2-3 levels can cause performance issues.
+
+#### Uniform Composition Patterns
+
+Composition Patterns allow creating compositions from a shared template. Non-overridable data in the composition pattern is locked down to reference the pattern. Composition patterns are created to lock down compositions and allow changing only a subset of data, or to rapidly make pages from external data sources.
+
+#### Entry Patterns
+
+Entry Patterns allow creating Entries from a shared template. Non-overridable data in the entry pattern is locked down to reference the pattern. Entry patterns are created to lock down entries and allow changing only a subset of data, or to rapidly make entries from external data sources.
 
 #### Uniform Pattern Overrides
 
-Parameters on patterns can be defined _overridable_ by the pattern definition. Overridable parameter values default to using the value defined on the pattern, but consumers of the pattern may choose to break the inheritance of that parameter value and replace it with their own instance-specific value. Patterns that contain other patterns may not alter the overridability of nested pattern parameters: once overridable, any consumer of the pattern can change the value. Overrides are used to allow partial content sharing and exception cases.
+Parameters or fields on patterns can be defined _overridable_ by the pattern definition. Overridable parameter values default to using the value defined on the pattern, but consumers of the pattern may choose to break the inheritance of that parameter value and replace it with their own instance-specific value. Patterns that contain other patterns may not alter the overridability of nested pattern parameters: once overridable, any consumer of the pattern can change the value. Overrides are used to allow partial content sharing and exception cases.
 
 #### Using Uniform Patterns as Shared Content Snippets
 
@@ -148,3 +183,4 @@ The following Uniform features cannot currently be changed using MCP/AI. If aske
 - Adding, editing, or removing entry patterns
 - Adding, editing, or removing block type fields/parameters, or block type definitions
 - Setting the value of asset or reference type fields/parameters
+- All content you work with is in a 'draft' state. You do not have access to published content and cannot assist with publishing. Send requests to publish with a link to edit the item.
