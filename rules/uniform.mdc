@@ -66,8 +66,8 @@ Example:
         Only the listed pattern and `hero` components are allowed - no other patterns based on `hero` are valid.
     * If `false`: a pattern is allowed if its base component type is listed in `allowedComponents`.
         Example: 
-        `["hero"]` -> `hero` 
-        All `hero` components and any pattern based on `hero` are allowed.
+        `["hero"]`
+        Only `hero` components and any pattern based on `hero` are allowed.
 
 IMPORTANT: Before you add new components to a slot, make sure that they are allowed according to the preceding rules.
 IMPORTANT: If you change `patternsInAllowedComponents` to false, remove any existing pattern IDs in the allowed list.
