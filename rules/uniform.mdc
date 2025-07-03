@@ -181,11 +181,15 @@ Exhaustive list of allowed field/parameter types:
 The following Uniform features cannot currently be changed using MCP/AI. If asked to perform the following actions, explain you cannot yet do that, and when possible offer a link to perform the task in the Uniform web app.
 
 - Interacting with slot sections (adding, removing, manipulating components within)
+- Creating new Loop component instances
 - Adding, editing, or removing block type fields/parameters, or block type definitions
 - Setting the value of asset or reference type fields/parameters
 - Editing conditional values on parameters or fields (the default value can be edited)
-- Setting visibility rules on components
+- Setting visibility rules on component instances
 - Changing data sources, data types, or data resources
 - Adding or removing project map nodes, and linking compositions to project map nodes
 - Adding or removing content from Uniform Releases, or changing releases (i.e. locking, scheduling)
 - All content you work with is in a 'draft' state. You do not have access to published content and cannot assist with publishing
+- Managing workflows, or transitioning compositions, entries, or patterns from one workflow stage to another
+- Managing assets, including generating,uploading, editing, or deleting assets
+- Changing user permissions
