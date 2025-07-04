@@ -92,6 +92,12 @@ Conventionally these commands are registered as package scripts to make it unnec
 }
 ```
 
+## Rules for when to use Uniform CLI and when not
+
+CRITICAL, NEVER IGNORE THIS RULE: never use or manipulate in any way (create, read, update, or delete) yaml or json files that represent Uniform data (placed typically in the "uniform-data" folder) when trying to create, modify, delete components, content types, or any other Uniform entity. Instead, always use Uniform MCP tool that is registered. If you cannot resolve a Uniform MCP Server or any MCP action, return a graceful message to the user and abort.
+
+IMPORTANT: execute "npm run uniform:pull" after making any changes to Uniform data via MCP Server. This ensures you have the latest representation of the Uniform data on disk.
+
 #### Getting Uniform CLI help
 
 The Uniform CLI has a built-in help system. To get help on a command, run `uniform <command> --help`, for example `uniform sync pull --help`.
