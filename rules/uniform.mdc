@@ -10,7 +10,11 @@ Uniform is a modern, headless, component-based Content Management System (CMS). 
 
 ### Uniform Compositions
 
-A composition instance in Uniform is roughly equivalent to a page. Composition definitions define a reusable schema for composition instances. Composition definitions have a structure identical to a Uniform Component, i.e. parameters and slots. Composition instances differ from components in that they also define a route or page. Instances of a composition create pages or routes within an application. The term "Composition" can be used to refer either to a definition or instance of a composition, you will need to infer which is meant (schema/reusable template = definition, page/route = instance).
+A composition instance in Uniform is roughly equivalent to a page. Composition definitions define a reusable schema for composition instances. 
+Composition definitions have a structure identical to a Uniform Component, i.e. parameters and slots. 
+Composition instances differ from components in that they also define a route or page. 
+Instances of a composition create pages or routes within an application. 
+The term "Composition" can be used to refer either to a definition or instance of a composition, you will need to infer which is meant (schema/reusable template = definition, page/route = instance).
 
 Composition parameters should only be used for global content that will never need to be personalized.
 Good example: OpenGraph data and meta tags (if they exist)
@@ -19,6 +23,18 @@ Bad example: "hero title" belongs in a Hero component in the content slot.
 A single composition definition called 'Page' is generally a good starting point. Additional composition definitions are only required if the page shell is different (e.g. Page, Popup, Minimal Page), or if there are different parameters needed on the composition definition
 
 In developer terms, a composition instance is a dynamic layout that is defined by non-technical authors; a composition definition is a hierarchical content schema definition.
+
+### Uniform Entries
+
+Entries are instances of structured content that you create using predefined Uniform Content Types. Think of content types as blueprints and entries as the actual content built from those blueprints.
+
+Each entry contains structured data for content pieces like articles, events, products, or any other content you need. Once created, entries become reusable assets that can power multiple experiences across your digital channels.
+
+## How entries differ from compositions and components
+
+An entry is structured content that represents a piece of content in a design-agnostic way. A component or composition describes the experience layer by defining which concrete UI component should be used to show particular content. Entries can also define relationships to other entries via references, which allows building complex content structures.
+
+By connecting the fields of an entry to the parameters of a component, you define how the content is displayed in a certain context. For example, you could show the same article entry in a hero, a card, or a list component. Which fields of an entry are shown can be different for each use case.
 
 ### Uniform Components
 
@@ -128,6 +144,12 @@ Example of a Dynamic Token in a text parameter referencing the myEntry title:
 - _data resources_ (name, type)
 - _parameters_ (value, overridable)
 - _slots_
+
+### Localization
+
+Uniform defines locales at a project level. These are locales that content can be written in. 
+Individual compositions, entries, and patterns must also _enable_ a locale to indicate that they have content in that locale. This allows for specific content to support a subset of locales.
+Locales must be enabled before parameters or fields can have values in a locale.
 
 ## Conventions
 
