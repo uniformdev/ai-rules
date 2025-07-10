@@ -30,7 +30,7 @@ Entries are instances of structured content that you create using predefined Uni
 
 Each entry contains structured data for content pieces like articles, events, products, or any other content you need. Once created, entries become reusable assets that can power multiple experiences across your digital channels.
 
-## How entries differ from compositions and components
+#### How entries differ from compositions and components
 
 An entry is structured content that represents a piece of content in a design-agnostic way. A component or composition describes the experience layer by defining which concrete UI component should be used to show particular content. Entries can also define relationships to other entries via references, which allows building complex content structures.
 
@@ -149,7 +149,7 @@ Example of a Dynamic Token in a text parameter referencing the myEntry title:
 
 Uniform defines locales at a project level. These are locales that content can be written in. 
 Individual compositions, entries, and patterns must also _enable_ a locale to indicate that they have content in that locale. This allows for specific content to support a subset of locales.
-Locales must be enabled before parameters or fields can have values in a locale.
+Locales must be enabled on compositions, entries, or patterns before their parameters or fields can have values in that locale.
 
 ## Conventions
 
@@ -187,7 +187,7 @@ Exhaustive list of allowed field/parameter types:
 - All names should be title-cased prose, not technical shorthand (e.g. "Main Header" not "main-header" or "MainHeader"). There is no need to include the type of entity in a name (e.g. 'Hero' not 'Hero Component').
 - Do not name Uniform Components, Uniform Content Types, or Fields/Parameters based on visible content found in inputs; treat it as FPO (e.g. <h1>Hello</h1> does not mean name the component 'Hello' - describe its meaning instead, such as 'Headline').
 - _Public ID_ are developer-facing identifiers for Uniform entities. They are based on a slugified version of the name. Use a camel case, for example if the name is "Main Header", the public ID is "mainHeader". Public IDs must be unique within a given entity type (e.g. Uniform Components). You cannot alter public IDs after creating an entity. IMPORTANT: public IDs on parameters, fields, or components that start with `$` are system-owned, and cannot be altered by users. For example, you may not change parameters of the `$personalization` component or remove the `$viz` parameter from any component. You may add or remove system components such as `$test` to a slot's `allowedComponents`.
-- Descriptions or help text should be no longer than 1 short sentence. It is not necessary to write help text unless we have specific expectations for authors. For example a 'Title' doesn't need help text. But if we identify an image that needs to be 250x250px, that expectation belongs in help text. Descriptions and help text are plain text, no markdown or HTML.
+- Help text should be no longer than 1 short sentence. It is not necessary to write help text unless we have specific expectations for authors. For example a 'Title' doesn't need help text. But if we identify an image that needs to be 250x250px, that expectation belongs in help text. Descriptions and help text are plain text, no markdown or HTML.
 
 ## Tool Usage Tips
 
