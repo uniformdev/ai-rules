@@ -179,7 +179,7 @@ Exhaustive list of allowed field/parameter types:
 - _asset_: Image, video, audio, or other file
 - _json_: A JSON object. Not for use in author-facing fields/parameters, who will have trouble editing JSON.
 - _contentReference_: Allows referencing one or more Entries of a specific type. Can be used in Content Types, but not in Uniform Components.
-- _enrichmentTag_: Tag content with enrichments (relevant segments) to make viewing the content alter the classification of the visitor that saw it.
+- _$enr_: Tag content with enrichments (relevant segments) to make viewing the content alter the classification of the visitor that saw it.
 - _group_: Group multiple fields/parameters together visually, for example a group of address fields. IMPORTANT: fields added to a group must come directly after the group in the fields list.
 
 ### Uniform Naming Conventions
