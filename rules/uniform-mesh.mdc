@@ -1,3 +1,4 @@
+
 ---
 description: 
 globs: 
@@ -10,12 +11,34 @@ alwaysApply: true
 
 Uniform Mesh is a framework that enables extending the Uniform user interface with custom web applications. These integrations run as web applications hosted on URLs that the developer defines and communicate with the Uniform dashboard through iframe messaging.
 
+### Why Build Custom Mesh Integrations
+
+#### Connect to Custom Data Sources
+Custom Mesh integrations let you connect to data sources that are not supported by Uniform's built-in integrations. This gives your authors a better and more tailored experience when working with external systems.
+
+#### Extend the Uniform UI
+In addition to connecting to custom data sources, you can also extend the Uniform UI to improve the authoring experience or tailor it to your business processes.
+
 ## Core Architecture
 
 ### Integration Structure
 - **Web Application**: Provides UI incorporated into Uniform dashboard and implements external system interaction logic
 - **Manifest**: JSON configuration that tells Uniform how to incorporate the integration (mesh-manifest.json)
 - **Locations**: Specific areas in the Uniform UI where custom interfaces are rendered
+
+### How Locations Work
+
+Each location receives two types of data:
+
+**Value** - The main data object that your location can view and modify
+- Contains the primary information your location is responsible for editing
+- Example: For a Data Source location, the value contains the Data Source definition (name, configuration, settings)
+- Your location can request changes to this data through the Mesh SDK
+
+**Metadata** - Supporting information provided for context (read-only)
+- Contains related data to help your location function properly
+- Example: For a Data Type editor, metadata includes the current project ID and a copy of the parent Data Source
+- This data cannot be modified by your location
 
 ### Technology Stack Requirements
 - **Framework**: Next.js with page router (recommended)
@@ -50,7 +73,23 @@ Uniform Mesh is a framework that enables extending the Uniform user interface wi
 
 ## Location Types and Implementation Patterns
 
-### 1. Settings Location
+### 1. Basic Locations
+
+#### Install Location
+The Install location is shown in a drawer when installing an integration. Unlike other locations, this is not rendered in an iframe but configured directly in the manifest.
+
+**Manifest Configuration:**
+```json
+"install": {
+  "description": [
+    "Describe your mesh integration",
+    "Each array element will create a new paragraph on the install dialog."
+  ],
+  "informationUrl": "https://yoursite.com/info-about-this-mesh-app"
+}
+```
+
+#### Settings Location
 Used for integration-wide configuration accessible from Project Settings > Integrations.
 
 **Manifest Configuration:**
@@ -93,6 +132,8 @@ const Settings = () => {
 };
 ```
 
+**Security Note**: If your integration defines data connectors for edge-based data fetching, do not save access credentials in the Settings location. Instead, store them in the Data Source location which provides secure storage.
+
 ### 2. Data Connectors
 Enable integration with external data sources for content mapping.
 
@@ -113,6 +154,8 @@ Enable integration with external data sources for content mapping.
   }
 ]
 ```
+
+**HTTP Fallback Behavior**: If any location of a data connector is not specified in the integration manifest, the UI from the standard `HTTP Request` data connector will be used automatically. This enables integration developers to produce fewer UIs if only looking to customize part of a data connector.
 
 #### Data Source Editor
 Configures connection settings for the external system.
@@ -166,6 +209,8 @@ const DataSourceEditor = () => {
 };
 ```
 
+**Secrets Management**: Query string and header values, as well as any variable values on a data source, are encrypted secrets. Only users with manage data source or admin permissions may decrypt secrets. All others can use them via delegation when fetching data types, without seeing the secret values.
+
 #### Data Type Editor
 Configures how data is retrieved and processed.
 
@@ -208,6 +253,8 @@ const DataTypeEditor = () => {
   );
 };
 ```
+
+**Security Note**: Data types are not intended to contain secret values such as authentication tokens. Values stored in data types are viewable by any user of your Uniform project with common permissions. To store secret values, use Data Sources which are secured.
 
 #### Data Resource Editor
 Enables users to select specific data items.
@@ -260,7 +307,9 @@ const DataResourceEditor = () => {
 };
 ```
 
-### 3. Canvas Parameter Types
+### 3. Canvas Locations
+
+#### Parameter Types
 Custom parameter editors for Canvas components.
 
 **Manifest Configuration:**
@@ -296,6 +345,79 @@ const ParameterEditor = () => {
 };
 ```
 
+#### Editor Tools
+Add custom tools to Canvas and Entry editors.
+
+**Manifest Configuration:**
+```json
+"canvas": {
+  "editorTools": {
+    "composition": {
+      "url": "/canvas-tools"
+    },
+    "componentPattern": {
+      "url": "/component-tools"
+    },
+    "entry": {
+      "url": "/entry-tools"
+    },
+    "entryPattern": {
+      "url": "/entry-pattern-tools"
+    }
+  }
+}
+```
+
+**Implementation Pattern:**
+```tsx
+import { useMeshLocation } from '@uniformdev/mesh-sdk-react';
+
+const CanvasEditorTools = () => {
+  const { value, metadata } = useMeshLocation('canvasEditorTools');
+  const compositionId = value.rootEntity._id;
+
+  const handleAction = async () => {
+    // Perform custom action on composition
+    const response = await fetch('/api/custom-action', {
+      method: 'POST',
+      body: JSON.stringify({ compositionId }),
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    if (response.ok) {
+      // Show success feedback
+    }
+  };
+
+  return (
+    <div>
+      <h3>Custom Tools</h3>
+      <Button onClick={handleAction}>
+        Perform Custom Action
+      </Button>
+    </div>
+  );
+};
+```
+
+#### Personalization Selection Algorithms
+Register custom algorithms for selecting variations in personalization components.
+
+**Manifest Configuration:**
+```json
+"canvas": {
+  "personalization": {
+    "selectionAlgorithms": {
+      "custom-personalization-algorithm-id": {
+        "displayName": "Custom personalization algorithm",
+        "description": "Description of the custom personalization algorithm",
+        "criteriaEditorUrl": "/personalization-criteria-editor"
+      }
+    }
+  }
+}
+```
+
 ### 4. Asset Library Integration
 Extends Uniform's asset management with external asset providers.
 
@@ -307,7 +429,7 @@ Extends Uniform's asset management with external asset providers.
 }
 ```
 
-**Implementation Pattern:**
+**Asset Library Implementation Pattern:**
 ```tsx
 import { useMeshLocation } from '@uniformdev/mesh-sdk-react';
 
@@ -354,59 +476,21 @@ const AssetLibrary = () => {
 };
 ```
 
-### 5. Editor Tools
-Add custom tools to Canvas and Entry editors.
-
-**Manifest Configuration:**
-```json
-"canvas": {
-  "editorTools": {
-    "composition": {
-      "url": "/canvas-tools"
-    },
-    "componentPattern": {
-      "url": "/component-tools"
-    },
-    "entry": {
-      "url": "/entry-tools"
-    }
-  }
-}
-```
-
-**Implementation Pattern:**
+**Asset Parameter Implementation Pattern:**
 ```tsx
-import { useMeshLocation } from '@uniformdev/mesh-sdk-react';
-
-const CanvasEditorTools = () => {
-  const { value, metadata } = useMeshLocation('canvasEditorTools');
-  const compositionId = value.rootEntity._id;
-
-  const handleAction = async () => {
-    // Perform custom action on composition
-    const response = await fetch('/api/custom-action', {
-      method: 'POST',
-      body: JSON.stringify({ compositionId }),
-      headers: { 'Content-Type': 'application/json' }
-    });
-    
-    if (response.ok) {
-      // Show success feedback
-    }
-  };
-
+const AssetParameter = () => {
+  const { metadata } = useMeshLocation('assetParameter');
+  
   return (
     <div>
-      <h3>Custom Tools</h3>
-      <Button onClick={handleAction}>
-        Perform Custom Action
-      </Button>
+      {/* Custom asset selection interface for parameters */}
+      <AssetSelector onSelect={handleAssetSelection} />
     </div>
   );
 };
 ```
 
-### 6. Project Tools
+### 5. Project Tools
 Add custom tools to project navigation.
 
 **Manifest Configuration:**
@@ -420,6 +504,114 @@ Add custom tools to project navigation.
   }
 ]
 ```
+
+Common use cases include:
+- Embedding external applications like analytics tools
+- Custom editorial tools like importers or editorial calendar
+- Project-specific documentation pages or Storybook component reference
+
+### 6. Dashboard Tools
+Add custom dashboards to the project dashboard page.
+
+**Manifest Configuration:**
+```json
+"dashboardTools": [
+  {
+    "id": "custom-dashboard-id",
+    "name": "Custom dashboard",
+    "url": "/dashboard-tool",
+    "iconUrl": "/dashboard-icon.png"
+  }
+]
+```
+
+Common use cases include:
+- Quick links to common content or content filters
+- Editorial dashboards for content editors that connect to external systems
+- Links to internal training or onboarding resources
+- Status or health dashboards for content operations
+
+## Routing in Mesh Locations
+
+Since Mesh locations are rendered inside iframes, standard browser navigation doesn't work for moving between different sections of the Uniform dashboard. The Mesh SDK provides routing helpers that allow your integration to programmatically navigate users to other areas of the platform.
+
+### Using the Router
+
+The router is available through the `useMeshLocation` hook:
+
+```tsx
+import { useMeshLocation } from '@uniformdev/mesh-sdk-react';
+
+const { router } = useMeshLocation<'projectTool'>();
+```
+
+### Navigation Options
+
+**Navigate within the current project:**
+```tsx
+router.navigatePlatform(path);
+```
+The router automatically handles the project context. For example, to navigate to entries: `/dashboards/canvas/entries`.
+
+**Open in a new tab:**
+```tsx
+router.navigatePlatform(path, { target: '_blank' });
+```
+
+**Navigate to a different project:**
+```tsx
+router.navigatePlatform(path, { 
+  projectId: 'target-project-id', 
+  target: '_blank' 
+});
+```
+
+## Development Workflow
+
+### Create an Integration
+
+To create a new integration, use the Uniform CLI:
+
+```bash
+npx @uniformdev/cli@latest new-integration
+```
+
+The CLI will guide you through:
+- Authenticating to Uniform (including creating an account if needed)
+- Choosing the team to register the integration to
+- Choosing or creating a project to install the integration to
+- Cloning the integration starter kit and examples files
+- Automatically configuring Uniform API keys and environment variables
+
+### Register the Integration
+
+**Team Admin Permission Required**: To register an integration, you must have the Team admin permission.
+
+#### 1. Register at Team Level
+Register your integration to make it available across all projects within the team:
+
+- **Uniform Dashboard**: Navigate to `Settings > Custom integrations` in the team dashboard
+- **Uniform CLI**: Use the integration commands
+
+```bash
+uniform integration register --manifest mesh-manifest.json
+```
+
+#### 2. Install in Project
+Once registered, install the integration in specific projects where you want to use it.
+
+### Deploy an Integration
+
+#### Update Manifest for Production
+Once deployed, update the integration manifest with production URLs instead of local development URLs.
+
+**Best Practice**: Maintain different manifest files for different environments (development and production).
+
+#### Hosting Requirements
+- Mesh integrations can run on public or private domains
+- Browser must be able to access both the app's URL and https://uniform.app
+- HTTPS required for production (HTTP allowed for localhost development)
+- Configure appropriate CORS headers for API endpoints
 
 ## Development Patterns and Best Practices
 
@@ -516,6 +708,19 @@ const IntegrationComponent = () => (
   </ErrorBoundary>
 );
 ```
+
+## Development Tools and Resources
+
+### SDK Packages
+The `@uniformdev/mesh-sdk-react` npm package includes full TypeScript typing information and JSDoc comments for all exports.
+
+### Design System Resources
+- [Uniform Design System Storybook](https://design.uniform.app/) - Complete component library for consistent UI
+- [React Mesh SDK Storybook](https://storybook.mesh.uniform.app/) - Usage examples for Mesh-specific components  
+- [React Mesh SDK component reference](https://sdk.uniform.app/design-system) - Reference documentation for React Mesh SDK components
+
+### Starter Kit
+Complete examples of how to implement all locations, with tips and tricks, are available in the [Mesh integration starter kit](https://github.com/uniformdev/examples/tree/main/mesh/mesh-integration).
 
 ## Custom Edgehancers (Advanced)
 
@@ -741,9 +946,9 @@ describe('request edgehancer', () => {
   "dependencies": {
     "@uniformdev/mesh-sdk-react": "latest",
     "@uniformdev/design-system": "latest",
-    "next": "^13.0.0",
-    "react": "^18.0.0",
-    "react-dom": "^18.0.0",
+    "next": "latest",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "typescript": "^5.0.0"
   }
 }
@@ -776,3 +981,7 @@ your-mesh-integration/
 ```
 
 This documentation provides the complete foundation for building Uniform Mesh integrations. Always refer to the latest Uniform documentation and SDK for any updates to the API or best practices.
+
+## Implementation guidance
+
+1. IMPORTANT: do not add anything extra to the implementation of locations that the user didn't ask for. Only add essential code that supports requested functionality.
