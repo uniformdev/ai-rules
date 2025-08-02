@@ -101,3 +101,7 @@ IMPORTANT: execute "npm run uniform:pull" after making any changes to Uniform da
 #### Getting Uniform CLI help
 
 The Uniform CLI has a built-in help system. To get help on a command, run `uniform <command> --help`, for example `uniform sync pull --help`.
+
+## Must-have rules to follow when adding Uniform SDK
+
+1. Make sure to create a component in code for any composition component you find in the Uniform project automatically. Add any slots that you find on the definition. This will ensure the preview working as expected, otherwise it won't know whoch front-end component should render the composition from Uniform and produce an error. 
