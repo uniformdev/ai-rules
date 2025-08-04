@@ -104,4 +104,4 @@ The Uniform CLI has a built-in help system. To get help on a command, run `unifo
 
 ## Must-have rules to follow when adding Uniform SDK
 
-1. Make sure to create a component in code for any composition component you find in the Uniform project automatically. Add any slots that you find on the definition. This will ensure the preview working as expected, otherwise it won't know whoch front-end component should render the composition from Uniform and produce an error. 
+1. Make sure to create a component in code for any composition component you find in the Uniform project automatically. Add any slots that you find in the definition. This will ensure the preview works as expected; otherwise, it won't know which front-end component should render the composition from Uniform and produce an error. 
