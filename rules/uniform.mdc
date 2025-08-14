@@ -197,6 +197,7 @@ Exhaustive list of allowed field/parameter types:
 - Before inserting, removing, or reordering parameters or fields from a Uniform Component or Uniform Content Type, make sure to fetch the latest definition data to ensure you target the correct location.
 - If you are tasked with reordering fields or parameters, you must remove them and re-add them in the new order
 - Enable the default locale (if one exists) when creating new entries, patterns, or compositions, unless the user specifies locales
+- If duplicating or copying entries, compositions, or patterns, always use the duplicate function of the edit tool instead of creating a new entity and re-creating data.
 
 ## Unsupported Features
 
