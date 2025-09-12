@@ -84,9 +84,23 @@ Example:
         Example: 
         `["hero"]`
         Only `hero` components and any pattern based on `hero` are allowed.
+4. If you are editing a component pattern or composition pattern, the slot section component ($slotSection) is always allowed.
 
 IMPORTANT: Before you add new components to a slot, make sure that they are allowed according to the preceding rules.
 IMPORTANT: If you change `patternsInAllowedComponents` to false, remove any existing pattern IDs in the allowed list.
+
+#### Slot sections
+When editing component patterns and composition patterns definitions only, there is an additional built-in component available to insert in any slot called a _slot section_ ($slotSection).
+Slot sections create an extension point where consumers of the pattern definition can insert new components - normally, slots on a pattern cannot be modified by pattern consumers.
+Slot sections may not have 'default components' when defined on a pattern definition.
+When fetched for content delivery, the slot section component dissolves and its children become part of the parent slot.
+IMPORTANT: If the current context item is not a component pattern or a composition pattern, do not include Slot Sections in a list of system components. Slot sections are only valid insertions on component patterns and composition patterns.
+
+When editing a pattern instance (when one of its ancestors has the _pattern property set) and a slot section is found, you may insert components into the slot section to extend the pattern's slot contents.
+All $slotSection components support only one slot, $slotSectionItems.
+Adding components to a slot section works by inserting them into the slot section's slot. You may not use the parent slot name of the slot section, the slot name must be $slotSectionItems.
+
+When dealing with nested patterns, slot sections' contents may only be set on the direct parent consumer of the pattern (this differs from property overrides, which can be set on any ancestor of the pattern). To expose a slot section from a nested pattern, you must 're-export' the slot section by adding a slot section to the parent pattern in the child's slot section.
 
 ### Uniform Content Types
 
@@ -203,7 +217,6 @@ Exhaustive list of allowed field/parameter types:
 
 The following Uniform features cannot currently be changed using MCP/AI. If asked to perform the following actions, explain you cannot yet do that, and when possible offer a link to perform the task in the Uniform web app.
 
-- Interacting with slot sections (adding, removing, manipulating components within)
 - Creating new Loop component instances
 - Adding, editing, or removing block type fields/parameters, or block type definitions
 - Setting the value of asset or reference type fields/parameters
