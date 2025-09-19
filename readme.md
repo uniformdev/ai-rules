@@ -3,6 +3,13 @@
 This is the library of Uniform-specific rules to help your LLM tools work better with Uniform.
 Feeding these rules to your LLM will help it understand the context of the project and the specific requirements of Uniform.
 
+## How to install
+
+Run this command and follow the prompt:
+```bash
+npx @uniformdev/cli ai rules install
+```
+
 ## Must have rules for solution development:
 - [`rules/uniform.mdc`](./rules/uniform.mdc) - describes the core principles and concepts of Uniform
 - [`rules/uniform-sdk.mdc`](./rules/uniform-sdk.mdc) - describes the Uniform SDK and its capabilities
@@ -16,15 +23,3 @@ Feeding these rules to your LLM will help it understand the context of the proje
 
 ### Optional rules:
 The rules files under [`rules/optional-personal-preferences`](./rules/optional-personal-preference/) contain non-essential rules that contain alternative defaults, highly recommended to review those and adjust to your liking.
-
-## How to use
-
-## With Cursor
-
-1. Simply copy all the `.mdc` files to your project root inside `.cursor/rules` folder.
-
-Attach the rules to your context chat based on your needs - add framework-specific rules if you are using a specific framework.
-
-## Claude Code and other tools
-
-Point Claude Code to the folder with the rules to augment its understanding of Uniform specifics.
