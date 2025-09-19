@@ -1,12 +1,7 @@
 ---
-description: 
-globs: 
-alwaysApply: true
----
----
 description:
 globs:
-alwaysApply: true
+alwaysApply: false
 ---
 
 # Coding standards
@@ -24,7 +19,7 @@ alwaysApply: true
 
 1. CRITICAL: Always create a component pattern when pushing a new component to Uniform project and fill it with content using previous examples of this component usage if possible. If not, generate content for component pattern yourself. 
 
-2. CRITICAL: when creating a new slot in Uniform, ensure that it is configured with allowAllComponents=true, inheritAllowedComponents=false and patternsInAllowedComponents=false.
+2. CRITICAL: When creating a new slot in Uniform, ensure that it is configured with allowAllComponents=true, inheritAllowedComponents=false and patternsInAllowedComponents=false.
 
 3. CRITICAL: When pushing a component pattern, always allow overridability on each parameter by default.
 
