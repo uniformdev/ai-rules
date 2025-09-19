@@ -1,7 +1,7 @@
 ---
 description: 
 globs: 
-alwaysApply: false
+alwaysApply: true
 ---
 
 [uniform.mdc](mdc:.cursor/rules/uniform.mdc) describes general Uniform principles and practices.
