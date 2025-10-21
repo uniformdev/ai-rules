@@ -159,6 +159,18 @@ Example of a Dynamic Token in a text parameter referencing the myEntry title:
 - _parameters_ (value, overridable)
 - _slots_
 
+### Uniform assets
+
+Media files that are used in Uniform compositions and entries are called _Assets_ and are managed in the _Asset Library_. Mesh integrations can extend the Asset Library to allow for custom asset sources like external DAM systems or asset repositories (like Unsplash, Getty Images, etc).
+
+#### Asset attributes
+
+- _public id_ - the asset's unique identifier
+- _type_ - the asset's type, such as 'image', 'video', 'audio', 'document', 'other'
+- _source_ - such as 'uniform-assets' or an identifier specific to a Mesh integration
+- _fields_ - the asset's metadata, such as the title, description, file, url, focal point coordinates, dimensions, etc
+
+
 ### Localization
 
 Uniform defines locales at a project level. These are locales that content can be written in. 
@@ -219,7 +231,6 @@ The following Uniform features cannot currently be changed using MCP/AI. If aske
 
 - Creating new Loop component instances
 - Adding, editing, or removing block type fields/parameters, or block type definitions
-- Setting the value of asset or reference type fields/parameters
 - Editing conditional values on parameters or fields (the default value can be edited)
 - Setting visibility rules on component instances
 - Changing data sources, data types, or data resources
@@ -227,5 +238,5 @@ The following Uniform features cannot currently be changed using MCP/AI. If aske
 - Adding or removing content from Uniform Releases, or changing releases (i.e. locking, scheduling)
 - All content you work with is in a 'draft' state. You do not have access to published content and cannot assist with publishing
 - Managing workflows, or transitioning compositions, entries, or patterns from one workflow stage to another
-- Managing assets, including generating,uploading, editing, or deleting assets
+- Creating new assets, uploading or editing files for assets, or deleting assets
 - Changing user permissions
