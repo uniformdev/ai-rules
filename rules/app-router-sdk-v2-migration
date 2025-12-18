@@ -1,0 +1,311 @@
+---
+description: Next.js app router SDK v2 migration guide
+globs
+alwaysApply: false
+---
+
+# Next.js app router SDK v2 migration guide
+
+### Install Packages
+
+To install packages you need `NPM_TOKEN` that has permission to them:
+
+```jsx
+    "@uniformdev/canvas-next-rsc-v2": "20.7.1-alpha.106",
+    "@uniformdev/canvas-next-rsc-shared-v2": "20.7.1-alpha.106",
+    "@uniformdev/canvas-next-rsc-client-v2": "20.7.1-alpha.106",
+```
+
+Make sure you have this in your `.npmrc` file in the project root and NPM_TOKEN env var set to the value provided.
+
+```jsx
+//registry.npmjs.org/:_authToken=${NPM_TOKEN}
+```
+
+It’s best to reference all three in your `package.json` to avoid version mismatches as new packages are released.
+
+### New Middleware
+
+Middleware is now required to route requests and evaluate compositions, the basic structure should look like this:
+
+```jsx
+import { uniformMiddleware } from '@uniformdev/canvas-next-rsc-v2/middleware';
+
+export default uniformMiddleware();
+```
+
+(Optionally) You can also rewrite where the middleware will redirect to. This can be useful if you are trying to code split your components and do not want to define them all on every page.
+
+```jsx
+import { handleUniformRoute } from "@uniformdev/canvas-next-rsc-v2/middleware";
+import { NextRequest } from "next/server";
+
+export default (request: NextRequest) => {
+  return handleUniformRoute({
+    request,
+    rewrite: async ({ code, route }) => {
+      if (route.compositionApiResponse.composition.type === "page") {
+        return `/rewrite-here-instead/${code}`;
+      }
+
+      return `/default-rewrite/${code}`;
+    },
+  });
+};
+
+```
+
+### New File Structure
+
+Before the expectation was that you could have a catch all page route, now by default we expect you to have the following file structure:
+
+- app
+    - uniform
+        - [code]
+            - page.tsx
+
+The default implementation of `page.tsx` should be:
+
+```jsx
+import {
+  resolveRouteFromCode,
+  UniformComposition,
+  UniformPageParameters,
+} from "@uniformdev/canvas-next-rsc-v2";
+import { notFound } from "next/navigation";
+
+import { resolveComponent } from "../../../components/resolveComponent";
+
+// optionally, enable ahead-of time build-time static generation of specific paths
+export const generateStaticParams = async () => {
+  return createUniformStaticParams({
+    paths: ["/"],
+  });
+};
+
+export default async function UniformPage(props: UniformPageParameters) {
+  const result = await resolveRouteFromCode(props);
+
+  if (!result.route) {
+    notFound();
+  }
+
+  // optional, when used tests and personalizations
+  // will only be evaluated here and not on the client
+  // await precomputeComposition(result);
+
+  return (
+    <>
+      <Suspense fallback={null}>
+        <UniformContext
+          result={result}   
+        />
+      </Suspense>
+      <UniformComposition {...result} resolveComponent={resolveComponent} />
+    </>
+  );
+}
+
+```
+
+### ComponentProps
+
+This type was reworked a little, the older interface used to look like this:
+
+```jsx
+export type ComponentProps<TProps = unknown, TSlotNames extends string = string> = TProps & {
+  component: ComponentInstance;
+  context: CompositionContext;
+  slots: Record<TSlotNames, SlotDefinition>;
+  slotName: string | undefined;
+  slotIndex: number | undefined;
+};
+```
+
+Now it looks like this:
+
+```
+export type ComponentProps<
+  TParameters extends Record<string, ComponentParameter> | unknown = Record<string, ComponentParameter>,
+  TSlotNames extends string = string,
+> = {
+  type: string;
+  variant: string | null;
+  slots: Record<TSlotNames, SlotDefinition>;
+  parameters: TParameters;
+  component: ComponentContext;
+  context: CompositionContext;
+};
+```
+
+The following changes were made:
+
+- You are no longer passed the entire component
+- Parameters are no longer added to the top level of the object
+- Parameters are now of type `Record<string, ComponentParameter>`
+
+```jsx
+type HeroParamters = {
+	title: string
+}
+
+type HeroProps = ComponentProps<HeroParameters>
+
+const Hero = ({ title }: HeroProps) => {
+	return (
+		<h1>{title}</h1>
+	)
+}
+```
+
+Should now be
+
+```jsx
+type HeroParamters = {
+	title: ComponentParameter<string>
+}
+
+type HeroProps = ComponentProps<HeroParameters>
+
+const Hero = ({ parameters: { title }}: HeroProps) => {
+	return (
+		<h1>{title.value}</h1>
+	)
+}
+```
+
+This change was made to keep the full parameter intact and hopefully be able to use this data to implement conditional values.
+
+### UniformSlot
+
+The slot definition type used to look like this:
+
+```jsx
+export type SlotDefinition = {
+  name: string;
+  items: PropsWithChildren['children'][];
+};
+```
+
+Now it looks like this:
+
+```jsx
+export type SlotDefinition = {
+  name: string;
+  items: ({
+    _id: string;
+    [CANVAS_PERSONALIZATION_PARAM]: VariantMatchCriteria | undefined;
+    component: ReactNode;
+  } | null)[];
+};
+```
+
+Slots can be rendered with a single prop:
+
+```jsx
+<UniformSlot slot={slots.header} />
+```
+
+If you would like to extract all of the components that make up a slot, you can do the following:
+
+```jsx
+const headerItems = slots.header.items.map((item) => item?.component);
+```
+
+If you would like to resolve the ComponentInstance data for the slot, you can use a component cache to resolve these. Currently this requires manual configuration as it wasnt working correctly when exported from the package:
+
+Define your cache, in a file like `lib/cache.ts`
+
+```jsx
+import { createCompositionCache } from "@uniformdev/canvas-next-rsc-v2";
+
+export const compositionCache = createCompositionCache();
+```
+
+Pass this cache to `UniformComposition` as a prop:
+
+```jsx
+      <UniformComposition
+        {...result}
+        resolveComponent={resolveComponent}
+        compositionCache={compositionCache}
+      />
+```
+
+Then in your components, you can resolve component data including components that make up a slot:
+
+```jsx
+import {
+  ComponentProps,
+  UniformSlot,
+} from "@uniformdev/canvas-next-rsc-v2/component";
+
+import { QuirkButton } from "./custom/QuirkButton";
+import { compositionCache } from "@/lib/cache";
+
+export type PageProps = unknown;
+export type PageSlots = "content" | "header" | "footer";
+
+export const Page = ({
+  slots,
+  context,
+}: ComponentProps<PageProps, PageSlots>) => {
+  const headerItems = slots.header.items.map((item) => {
+    const resolved = compositionCache.getUniformComponent({
+      componentId: item!._id,
+      compositionId: context._id,
+    });
+
+    console.log(resolved?.parameters);
+
+    return resolved;
+  });
+
+  return (
+    <div>This is a page.</div>
+  );
+};
+
+```
+
+### Adapter Components
+
+An adapter layer also exists to easy the transition from V1 to V2, use the built in `createAdapterResolveComponentFunction` function and pass the component mappings for your site.
+
+```jsx
+import { createAdapterResolveComponentFunction } from '@uniformdev/canvas-next-rsc-v2/compat';
+
+import * as mappings from './mappings';
+
+export const resolveComponent = createAdapterResolveComponentFunction({ mappings });
+
+```
+
+Adjust your mappings to use `ResolveComponentResultWithType` and adding `mode: 'adapted'` to each definition that you are adapting.
+
+```tsx
+import type {
+	ComponentProps,
+	ResolveComponentResultWithType,
+} from '@uniformdev/canvas-next-rsc-v2/compat';
+
+type PageComponentParameters = {
+	text: string;
+};
+
+const PageComponent = ({ text }: ComponentProps<PageComponentParameters>) => {
+	return <div>{text}</div>;
+};
+
+export const pageMapping: ResolveComponentResultWithType = {
+	type: 'page',
+	component: PageComponent,
+	mode: 'adapted',
+};
+```
+
+Use `UniformText` and `UniformSlot` components from the same `compat` export.
+
+### Clients
+
+- `getDefaultRouteClient` is now `getRouteClient`
