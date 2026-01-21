@@ -10,14 +10,12 @@ This document details how to use Uniform SDK with React.js and Next.js App Route
 @uniform.mdc describes general Uniform principles and practices.
 @uniform-sdk.mdc describes framework-agnostic developer principles.
 
-## Required npm packages
+## Required npm packages (version 20.48.0 or later)
 
 ```json
 {
-  "@uniformdev/canvas-next-rsc-v2": "^20.7.1",
-  "@uniformdev/canvas-next-rsc-client-v2": "^20.7.1",
-  "@uniformdev/canvas-next-rsc-shared-v2": "^20.7.1",
-  "@uniformdev/context": "^20.7.1"
+   "@uniformdev/next-app-router": "20.48.0",
+   "@uniformdev/context": "20.48.0",
 }
 ```
 
@@ -44,18 +42,14 @@ next.config.ts                 # Next.js config with withUniformConfig
 
 ## Server Configuration
 
-### uniform.server.config.ts
+### uniform.server.config.ts is optional now:
 
 ```ts
-import { UniformServerConfig } from "@uniformdev/canvas-next-rsc-v2/config";
+import { UniformServerConfig } from "@uniformdev/next-app-router/config";
 
 const config: UniformServerConfig = {
   defaultConsent: true,
-  playgroundPath: "/playground",
-  experimental: {
-    quirkSerialization: true,
-    middlewareRuntimeCache: true,
-  },
+  playgroundPath: "/playground"
 };
 
 export default config;
@@ -99,7 +93,7 @@ const config: UniformServerConfig = {
 ### next.config.ts
 
 ```ts
-import { withUniformConfig } from "@uniformdev/canvas-next-rsc-v2/config";
+import { withUniformConfig } from "@uniformdev/next-app-router/config";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -124,7 +118,7 @@ export const runtime = 'experimental-edge';
 ### Basic middleware
 
 ```ts
-import { uniformMiddleware } from "@uniformdev/canvas-next-rsc-v2/middleware";
+import { uniformMiddleware } from "@uniformdev/next-app-router/middleware";
 
 export default uniformMiddleware();
 
@@ -135,7 +129,7 @@ export const runtime = 'experimental-edge';
 ### Middleware with locale handling
 
 ```ts
-import { uniformMiddleware } from "@uniformdev/canvas-next-rsc-v2/middleware";
+import { uniformMiddleware } from "@uniformdev/next-app-router/middleware";
 
 const defaultLocale = "en";
 const locales = ["en"];
@@ -166,7 +160,7 @@ export const runtime = 'experimental-edge';
 ### Full middleware options
 
 ```ts
-import { uniformMiddleware } from "@uniformdev/canvas-next-rsc-v2/middleware";
+import { uniformMiddleware } from "@uniformdev/next-app-router/middleware";
 
 export default uniformMiddleware({
   // Rewrite request path before route resolution
@@ -202,38 +196,32 @@ export const runtime = 'experimental-edge';
 `app/uniform/[code]/page.tsx`:
 
 ```tsx
-import { Suspense } from "react";
 import {
   resolveRouteFromCode,
   UniformComposition,
   UniformPageParameters,
   createUniformStaticParams,
-  UniformContext,
-} from "@uniformdev/canvas-next-rsc-v2";
-import { notFound } from "next/navigation";
+} from "@uniformdev/next-app-router";
 import { resolveComponent } from "@/components/resolveComponent";
 
 // Enable ISR (Incremental Static Regeneration)
 export const generateStaticParams = async () => {
   return createUniformStaticParams({
-    paths: ["/"],
+    // paths: ["/"],
+    // Important: for localized sites, you need to add the locales to the paths
+    paths: ["/en"],
   });
 };
 
 export default async function UniformPage(props: UniformPageParameters) {
-  const result = await resolveRouteFromCode(props);
-
-  if (!result.route) {
-    notFound();
-  }
-
+  const { code } = await props.params;
   return (
-    <>
-      <Suspense fallback={null}>
-        <UniformContext result={result} />
-      </Suspense>
-      <UniformComposition {...result} resolveComponent={resolveComponent} />
-    </>
+    <UniformComposition
+      code={code}
+      resolveRoute={resolveRouteFromCode}
+      resolveComponent={resolveComponent}
+      clientContextComponent={CustomUniformClientContext}
+    />
   );
 }
 ```
@@ -249,16 +237,28 @@ export default async function UniformPage(props: UniformPageParameters) {
 
 ```tsx
 import {
+  createUniformPlaygroundStaticParams,
+  PlaygroundParameters,
   resolvePlaygroundRoute,
-  UniformPageParameters,
   UniformPlayground,
-} from "@uniformdev/canvas-next-rsc-v2";
+} from "@uniformdev/next-app-router";
+
 import { resolveComponent } from "@/components/resolveComponent";
 
-export default async function PlaygroundPage(props: UniformPageParameters) {
-  const result = await resolvePlaygroundRoute(props);
+export const generateStaticParams = async () => {
+  return createUniformPlaygroundStaticParams({
+    paths: ["/en"],
+  });
+};
+
+export default async function PlaygroundPage({ params }: PlaygroundParameters) {
+  const { code } = await params;
   return (
-    <UniformPlayground route={result} resolveComponent={resolveComponent} />
+    <UniformPlayground
+      code={code}
+      resolveRoute={resolvePlaygroundRoute}
+      resolveComponent={resolveComponent}
+    />
   );
 }
 ```
@@ -296,7 +296,7 @@ export default function RootLayout({
 import {
   ResolveComponentFunction,
   type ResolveComponentResult,
-} from "@uniformdev/canvas-next-rsc-v2";
+} from "@uniformdev/next-app-router";
 
 import { DefaultNotFoundComponent } from "./default";
 import { HeroComponent } from "./hero";
@@ -318,7 +318,7 @@ export const resolveComponent: ResolveComponentFunction = ({ component }) => {
 Default fallback component:
 
 ```tsx
-import { ComponentProps } from "@uniformdev/canvas-next-rsc-v2/component";
+import { ComponentProps } from "@uniformdev/next-app-router/component";
 
 export const DefaultNotFoundComponent = ({ type }: ComponentProps) => {
   return <div>Not Found: {type}</div>;
@@ -340,7 +340,7 @@ import {
   ComponentProps,
   UniformText,
   UniformRichText,
-} from "@uniformdev/canvas-next-rsc-v2/component";
+} from "@uniformdev/next-app-router/component";
 
 export type HeroProps = {
   title?: ComponentParameter<string>;
@@ -383,7 +383,7 @@ const HeroComponent = ({ parameters: { title } }: ComponentProps<HeroProps>) => 
 ## Rendering Slots
 
 ```tsx
-import { ComponentProps, UniformSlot } from "@uniformdev/canvas-next-rsc-v2/component";
+import { ComponentProps, UniformSlot } from "@uniformdev/next-app-router/component";
 
 export type PageProps = unknown;
 export type PageSlots = "content" | "header" | "footer";
@@ -418,7 +418,7 @@ export const PageComponent = ({ slots }: ComponentProps<PageProps, PageSlots>) =
 Alternative for extracting slot items as array:
 
 ```tsx
-import { getUniformSlot } from "@uniformdev/canvas-next-rsc-v2/component";
+import { getUniformSlot } from "@uniformdev/next-app-router/component";
 
 const items = getUniformSlot({ slot: slots.content });
 // Returns ReactNode[] | undefined
@@ -429,7 +429,7 @@ const items = getUniformSlot({ slot: slots.content });
 Use composition cache to access ComponentInstance data:
 
 ```tsx
-import { createCompositionCache } from "@uniformdev/canvas-next-rsc-v2";
+import { createCompositionCache } from "@uniformdev/next-app-router";
 
 export const compositionCache = createCompositionCache();
 ```
@@ -465,7 +465,7 @@ For client-side context access and updates:
 ```tsx
 "use client";
 
-import { useUniformContext } from "@uniformdev/canvas-next-rsc-v2/component";
+import { useUniformContext } from "@uniformdev/next-app-router/component";
 import { useEffect, useState } from "react";
 
 export const QuirkButton = () => {
@@ -501,7 +501,7 @@ Reactive access to visitor quirk values:
 ```tsx
 "use client";
 
-import { useQuirks } from "@uniformdev/canvas-next-rsc-v2/component";
+import { useQuirks } from "@uniformdev/next-app-router/component";
 
 export const LocationBanner = () => {
   const quirks = useQuirks();
@@ -517,7 +517,7 @@ Reactive access to visitor score values:
 ```tsx
 "use client";
 
-import { useScores } from "@uniformdev/canvas-next-rsc-v2/component";
+import { useScores } from "@uniformdev/next-app-router/component";
 
 export const InterestIndicator = () => {
   const scores = useScores();
@@ -590,7 +590,7 @@ Use `flattenValues` from `@uniformdev/canvas`:
 
 ```tsx
 import { AssetParamValue, flattenValues } from "@uniformdev/canvas";
-import { ComponentParameter, ComponentProps } from "@uniformdev/canvas-next-rsc-v2/component";
+import { ComponentParameter, ComponentProps } from "@uniformdev/next-app-router/component";
 
 interface MyComponentProps {
   multipleImages?: ComponentParameter<AssetParamValue>;
@@ -627,7 +627,7 @@ import {
   createPreviewGETRouteHandler,
   createPreviewPOSTRouteHandler,
   createPreviewOPTIONSRouteHandler,
-} from "@uniformdev/canvas-next-rsc-v2/handler";
+} from "@uniformdev/next-app-router/handler";
 
 export const GET = createPreviewGETRouteHandler({
   resolveFullPath: ({ path }) => (path ? path : "/playground"),
@@ -646,7 +646,7 @@ import {
   UniformComposition,
   UniformContext,
   precomputeComposition,
-} from "@uniformdev/canvas-next-rsc-v2";
+} from "@uniformdev/next-app-router";
 
 export default async function UniformPage(props: UniformPageParameters) {
   const result = await resolveRouteFromCode(props);
@@ -691,7 +691,7 @@ import {
   getManifestClient,
   getProjectMapClient,
   getRouteClient,
-} from "@uniformdev/canvas-next-rsc-v2";
+} from "@uniformdev/next-app-router";
 ```
 
 ### Examples
@@ -818,17 +818,17 @@ type ComponentParameter<TValue = unknown> = BaseComponentParameter<TValue> & {
 
 | Category | Export | Import Path |
 |----------|--------|-------------|
-| **Core** | `UniformComposition`, `UniformContext`, `UniformPlayground` | `@uniformdev/canvas-next-rsc-v2` |
-| **Core** | `resolveRouteFromCode`, `resolvePlaygroundRoute`, `precomputeComposition` | `@uniformdev/canvas-next-rsc-v2` |
-| **Core** | `createUniformStaticParams`, `createCompositionCache` | `@uniformdev/canvas-next-rsc-v2` |
-| **Core** | `ResolveComponentFunction`, `ResolveComponentResult` | `@uniformdev/canvas-next-rsc-v2` |
-| **Clients** | `getCanvasClient`, `getRouteClient`, `getManifest`, `getManifestClient`, `getProjectMapClient` | `@uniformdev/canvas-next-rsc-v2` |
-| **Components** | `UniformSlot`, `UniformText`, `UniformRichText`, `getUniformSlot` | `@uniformdev/canvas-next-rsc-v2/component` |
-| **Types** | `ComponentProps`, `ComponentParameter`, `ComponentContext` | `@uniformdev/canvas-next-rsc-v2/component` |
-| **Hooks** | `useUniformContext`, `useQuirks`, `useScores` | `@uniformdev/canvas-next-rsc-v2/component` |
-| **Middleware** | `uniformMiddleware`, `handleUniformRoute` | `@uniformdev/canvas-next-rsc-v2/middleware` |
-| **Config** | `withUniformConfig`, `UniformServerConfig` | `@uniformdev/canvas-next-rsc-v2/config` |
-| **Handlers** | `createPreviewGETRouteHandler`, `createPreviewPOSTRouteHandler`, `createPreviewOPTIONSRouteHandler` | `@uniformdev/canvas-next-rsc-v2/handler` |
+| **Core** | `UniformComposition`, `UniformContext`, `UniformPlayground` | `@uniformdev/next-app-router` |
+| **Core** | `resolveRouteFromCode`, `resolvePlaygroundRoute`, `precomputeComposition` | `@uniformdev/next-app-router` |
+| **Core** | `createUniformStaticParams`, `createCompositionCache` | `@uniformdev/next-app-router` |
+| **Core** | `ResolveComponentFunction`, `ResolveComponentResult` | `@uniformdev/next-app-router` |
+| **Clients** | `getCanvasClient`, `getRouteClient`, `getManifest`, `getManifestClient`, `getProjectMapClient` | `@uniformdev/next-app-router` |
+| **Components** | `UniformSlot`, `UniformText`, `UniformRichText`, `getUniformSlot` | `@uniformdev/next-app-router/component` |
+| **Types** | `ComponentProps`, `ComponentParameter`, `ComponentContext` | `@uniformdev/next-app-router/component` |
+| **Hooks** | `useUniformContext`, `useQuirks`, `useScores` | `@uniformdev/next-app-router/component` |
+| **Middleware** | `uniformMiddleware`, `handleUniformRoute` | `@uniformdev/next-app-router/middleware` |
+| **Config** | `withUniformConfig`, `UniformServerConfig` | `@uniformdev/next-app-router/config` |
+| **Handlers** | `createPreviewGETRouteHandler`, `createPreviewPOSTRouteHandler`, `createPreviewOPTIONSRouteHandler` | `@uniformdev/next-app-router/handler` |
 | **Client** | `createClientUniformContext`, `useInitUniformContext`, `ClientContextComponent` | `@uniformdev/canvas-next-rsc-client-v2` |
 | **Canvas** | `flattenValues`, `AssetParamValue`, `LinkParamValue`, `RichTextParamValue` | `@uniformdev/canvas` |
 
