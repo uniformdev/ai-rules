@@ -1,25 +1,14 @@
 ---
-description: Next.js app router SDK v2 migration guide
-globs
-alwaysApply: false
+alwaysApply: true
 ---
-
 # Next.js app router SDK v2 migration guide
 
 ### Install Packages
 
-To install packages you need `NPM_TOKEN` that has permission to them:
+Install the following packages with npm: `npm i @uniformdev/next-app-router --save`
 
 ```jsx
-    "@uniformdev/canvas-next-rsc-v2": "20.7.1-alpha.106",
-    "@uniformdev/canvas-next-rsc-shared-v2": "20.7.1-alpha.106",
-    "@uniformdev/canvas-next-rsc-client-v2": "20.7.1-alpha.106",
-```
-
-Make sure you have this in your `.npmrc` file in the project root and NPM_TOKEN env var set to the value provided.
-
-```jsx
-//registry.npmjs.org/:_authToken=${NPM_TOKEN}
+  "@uniformdev/next-app-router": "20.48.0",
 ```
 
 It’s best to reference all three in your `package.json` to avoid version mismatches as new packages are released.
@@ -29,15 +18,24 @@ It’s best to reference all three in your `package.json` to avoid version misma
 Middleware is now required to route requests and evaluate compositions, the basic structure should look like this:
 
 ```jsx
-import { uniformMiddleware } from '@uniformdev/canvas-next-rsc-v2/middleware';
+import { uniformMiddleware } from '@uniformdev/next-app-router/middleware';
 
 export default uniformMiddleware();
+
+// IMPORTANT: runtime: "experimental-edge" is required for the middleware to work correctly for preview in Next.js 16
+export const config = {
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)",
+  ],
+  runtime: "experimental-edge",
+};
+
 ```
 
 (Optionally) You can also rewrite where the middleware will redirect to. This can be useful if you are trying to code split your components and do not want to define them all on every page.
 
 ```jsx
-import { handleUniformRoute } from "@uniformdev/canvas-next-rsc-v2/middleware";
+import { handleUniformRoute } from "@uniformdev/next-app-router/middleware";
 import { NextRequest } from "next/server";
 
 export default (request: NextRequest) => {
@@ -55,6 +53,25 @@ export default (request: NextRequest) => {
 
 ```
 
+### Server config is optional now
+
+If you have a `uniform.server.config.ts` or `uniform.server.config.js` in the application root, you can remove it if it matches the following default:
+
+```ts
+import { UniformServerConfig } from "@uniformdev/next-app-router/config";
+
+const config: UniformServerConfig = {
+  defaultConsent: true,
+  experimental: {
+    quirkSerialization: true,
+    middlewareRuntimeCache: true,
+  },
+  playgroundPath: "/playground",
+};
+
+export default config;
+```
+
 ### New File Structure
 
 Before the expectation was that you could have a catch all page route, now by default we expect you to have the following file structure:
@@ -68,44 +85,73 @@ The default implementation of `page.tsx` should be:
 
 ```jsx
 import {
-  resolveRouteFromCode,
   UniformComposition,
   UniformPageParameters,
-} from "@uniformdev/canvas-next-rsc-v2";
-import { notFound } from "next/navigation";
+  createUniformStaticParams,
+  resolveRouteFromCode,
+} from "@uniformdev/next-app-router";
+import { CustomUniformClientContext } from "@/components/CustomUniformClientContext";
 
 import { resolveComponent } from "../../../components/resolveComponent";
 
-// optionally, enable ahead-of time build-time static generation of specific paths
 export const generateStaticParams = async () => {
   return createUniformStaticParams({
-    paths: ["/"],
+    // paths: ["/"],
+    // Important: for localized sites, you need to add the locales to the paths
+    paths: ["/en"],
   });
 };
 
 export default async function UniformPage(props: UniformPageParameters) {
-  const result = await resolveRouteFromCode(props);
-
-  if (!result.route) {
-    notFound();
-  }
-
-  // optional, when used tests and personalizations
-  // will only be evaluated here and not on the client
-  // await precomputeComposition(result);
-
+  const { code } = await props.params;
   return (
-    <>
-      <Suspense fallback={null}>
-        <UniformContext
-          result={result}   
-        />
-      </Suspense>
-      <UniformComposition {...result} resolveComponent={resolveComponent} />
-    </>
+    <UniformComposition
+      code={code}
+      resolveRoute={resolveRouteFromCode}
+      resolveComponent={resolveComponent}
+      clientContextComponent={CustomUniformClientContext}
+    />
   );
 }
 
+```
+
+## New Playground implementation
+
+- app
+    - playground
+        - [code]
+            - page.tsx
+
+The default implementation of `page.tsx` should be:
+
+```jsx
+import {
+  createUniformPlaygroundStaticParams,
+  PlaygroundParameters,
+  resolvePlaygroundRoute,
+  UniformPlayground,
+} from "@uniformdev/next-app-router";
+
+import { resolveComponent } from "@/components/resolveComponent";
+
+export const generateStaticParams = async () => {
+  return createUniformPlaygroundStaticParams({
+    // Important: for localized sites, you need to add the locales to the paths
+    paths: ["/en"],
+  });
+};
+
+export default async function PlaygroundPage({ params }: PlaygroundParameters) {
+  const { code } = await params;
+  return (
+    <UniformPlayground
+      code={code}
+      resolveRoute={resolvePlaygroundRoute}
+      resolveComponent={resolveComponent}
+    />
+  );
+}
 ```
 
 ### ComponentProps
@@ -217,7 +263,7 @@ If you would like to resolve the ComponentInstance data for the slot, you can us
 Define your cache, in a file like `lib/cache.ts`
 
 ```jsx
-import { createCompositionCache } from "@uniformdev/canvas-next-rsc-v2";
+import { createCompositionCache } from "@uniformdev/next-app-router";
 
 export const compositionCache = createCompositionCache();
 ```
@@ -238,7 +284,7 @@ Then in your components, you can resolve component data including components tha
 import {
   ComponentProps,
   UniformSlot,
-} from "@uniformdev/canvas-next-rsc-v2/component";
+} from "@uniformdev/next-app-router/component";
 
 import { QuirkButton } from "./custom/QuirkButton";
 import { compositionCache } from "@/lib/cache";
@@ -273,7 +319,7 @@ export const Page = ({
 An adapter layer also exists to easy the transition from V1 to V2, use the built in `createAdapterResolveComponentFunction` function and pass the component mappings for your site.
 
 ```jsx
-import { createAdapterResolveComponentFunction } from '@uniformdev/canvas-next-rsc-v2/compat';
+import { createAdapterResolveComponentFunction } from '@uniformdev/next-app-router/compat';
 
 import * as mappings from './mappings';
 
@@ -287,7 +333,7 @@ Adjust your mappings to use `ResolveComponentResultWithType` and adding `mode: '
 import type {
 	ComponentProps,
 	ResolveComponentResultWithType,
-} from '@uniformdev/canvas-next-rsc-v2/compat';
+} from '@uniformdev/next-app-router/compat';
 
 type PageComponentParameters = {
 	text: string;
