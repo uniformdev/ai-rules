@@ -6,7 +6,6 @@ alwaysApply: true
 
 [uniform.mdc](mdc:.cursor/rules/uniform.mdc) describes general Uniform principles and practices.
 [uniform-sdk.mdc](mdc:.cursor/rules/uniform-sdk.mdc) describes framework-agnostic developer principles.
-[uniform-context-sdk.mdc](mdc:references/uniform-context-sdk.mdc) describes personalization and a/b testing developer practices.
 
 ### Required npm packages
 
