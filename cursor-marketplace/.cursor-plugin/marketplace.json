@@ -1,0 +1,25 @@
+{
+  "name": "uniform.dev",
+  "owner": {
+    "name": "Uniform.dev",
+    "email": "plugins@example.com"
+  },
+  "metadata": {
+    "description": "Uniform.dev",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "uniform-rules",
+      "source": "uniform-rules",
+      "description": "Uniform CMS rules for AI-assisted development (compositions, components, patterns, SDK, mesh)",
+      "keywords": ["uniform", "cms", "headless", "canvas", "sveltekit", "next"]
+    },
+    {
+      "name": "enterprise-toolkit",
+      "source": "enterprise-toolkit",
+      "description": "Enterprise development toolkit with security, compliance, and automation",
+      "keywords": ["enterprise", "security", "compliance", "code-review"]
+    }
+  ]
+}

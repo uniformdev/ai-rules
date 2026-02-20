@@ -1,0 +1,25 @@
+---
+description: Rules for Uniform SDK for Next.js Page Router
+globs: "**/*.{tsx,jsx}"
+alwaysApply: true
+---
+
+# Uniform Next.js Page Router
+
+See uniform.mdc for general Uniform principles and practices.
+See uniform-sdk.mdc for framework-agnostic developer principles.
+
+## Required npm packages
+
+- `@uniformdev/canvas`
+- `@uniformdev/canvas-react`
+- `@uniformdev/canvas-next`
+- `@uniformdev/context-react`
+
+## Fetching and rendering
+
+In `pages/[[...path]].{tsx|jsx}` use `withUniformGetServerSideProps()` for SSR and pass `data` to `UniformComposition` from `@uniformdev/canvas-react`. Type the page with `UniformCompositionNextPage`.
+
+## Component registration
+
+Use `registerUniformComponent({ type, component })` from `@uniformdev/canvas-react`. Import registrations in `_app.tsx` so they run. Use `ComponentProps<T>` for parameter typing; all parameter props optional. Use `UniformSlot` for child slots.

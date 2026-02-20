@@ -1,0 +1,32 @@
+---
+description: Rules for Uniform SDK for Next.js App Router
+globs: "**/*.{tsx,jsx}"
+alwaysApply: true
+---
+
+# Uniform React Next App Router
+
+See uniform.mdc for general Uniform principles and practices.
+See uniform-sdk.mdc for framework-agnostic developer principles.
+
+## Required npm packages
+
+- `@uniformdev/canvas-next-rsc`
+- `@uniformdev/canvas`
+
+## Config
+
+- Add `uniform.server.config.js` in project root (defaultConsent, evaluation, experimental).
+- Wrap Next config with `withUniformConfig()` from `@uniformdev/canvas-next-rsc/config`.
+
+## Fetching and rendering
+
+In `app/[[...path]]/page.{tsx|jsx}` use `retrieveRoute(props)` and render with `UniformComposition` from `@uniformdev/canvas-next-rsc` and `resolveComponent` for mapping. Use `mode="server"`.
+
+## Layout
+
+Wrap `{children}` in `UniformContext` from `@uniformdev/canvas-next-rsc` in `app/layout.tsx` for personalization and A/B testing.
+
+## Component registration
+
+Use `resolveComponent` (or equivalent) to map Uniform component types to React components. Create a component for every composition component in the Uniform project and add slots as in the definition.
