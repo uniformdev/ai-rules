@@ -1,0 +1,76 @@
+---
+description: Uniform SDK integration guide for SvelteKit applications. Use when integrating Uniform Canvas, Context, and personalization into a SvelteKit project.
+globs:
+alwaysApply: true
+---
+
+See uniform.mdc for general Uniform principles and practices.
+See uniform-sdk.mdc for framework-agnostic developer principles.
+
+## Required npm packages
+
+The following npm packages must be installed to wire Uniform CMS to SvelteKit:
+
+### Core Canvas packages
+- `@uniformdev/canvas` - Core Canvas API client for fetching compositions
+- `@uniformdev/canvas-svelte` - Svelte components: `UniformComposition`, `UniformSlot`, `UniformText`, `UniformRichText`
+- `@uniformdev/canvas-sveltekit` - SvelteKit integrations: `createUniformLoad`, `createUniformHandle`, preview handler, ISR config
+
+### Core Context packages (for personalization)
+- `@uniformdev/context` - Personalization Context engine
+- `@uniformdev/context-svelte` - `UniformContext` provider component
+
+### Edge personalization packages (optional, for production)
+- `@uniformdev/context-edge` - Edge-side context processing
+- `@uniformdev/context-edge-sveltekit` - NESI response handler for edge personalization
+- `@vercel/functions` - Vercel edge functions support
+- `cookie` - Cookie parsing utility
+
+### Dev dependencies
+- `@uniformdev/cli` - CLI for pulling manifests and syncing content (IMPORTANT: must be installed as devDependency)
+
+## Configuring TypeScript Types
+
+Update `src/app.d.ts` to include Uniform preview data types:
+
+```typescript
+import type { UniformPreviewData } from '@uniformdev/canvas-sveltekit';
+
+declare global {
+  namespace App {
+    interface Locals {
+      uniformPreview?: UniformPreviewData;
+    }
+  }
+}
+
+export {};
+```
+
+## Component Mapping
+
+Create `src/lib/uniform/componentMap.ts` to map Uniform component types to Svelte components. Use `type__variant` format for variants. Register all composition components so preview works.
+
+## Server Hooks and Catch-All Route
+
+- Use `createUniformHandle` from `@uniformdev/canvas-sveltekit` in `src/hooks.server.ts` for preview cookies.
+- Use `createUniformLoad` in `src/routes/[...path]/+page.server.ts` with `RouteClient` to fetch compositions.
+- Render with `UniformComposition` and `UniformSlot` in `+page.svelte`.
+
+## Preview Handler
+
+Create `src/routes/preview/+server.ts` with `createPreviewHandler` from `@uniformdev/canvas-sveltekit/preview`.
+
+## Rendering Uniform Components with Svelte
+
+- Use `ComponentProps<T>` for type-safe parameter access; all parameter props must be optional.
+- Use `UniformText` for editable text parameters, `UniformRichText` for rich text (Lexical JSON), `UniformSlot` for nested slots.
+- Use `flattenValues` from `@uniformdev/canvas` for asset parameters.
+
+## Environment Variables
+
+Required: `UNIFORM_API_KEY`, `UNIFORM_PROJECT_ID`, `UNIFORM_PROJECT_MAP_ID` (optional), `UNIFORM_PREVIEW_SECRET`.
+
+## CLI
+
+Use `uniform.config.ts` with `uniformConfig({ preset: 'all' })`. Add scripts: `uniform:pull`, `uniform:push`, `pull:manifest` for context manifest.

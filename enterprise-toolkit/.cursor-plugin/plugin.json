@@ -1,0 +1,11 @@
+{
+  "name": "enterprise-toolkit",
+  "version": "1.0.0",
+  "description": "Enterprise development toolkit with security scanning, compliance checks, and automation",
+  "author": {
+    "name": "AI Rules",
+    "email": "plugins@example.com"
+  },
+  "keywords": ["enterprise", "security", "compliance", "code-review"],
+  "logo": "assets/logo.svg"
+}

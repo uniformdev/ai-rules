@@ -1,0 +1,21 @@
+{
+  "hooks": {
+    "afterFileEdit": [
+      {
+        "command": "./scripts/format-code.py",
+        "matcher": "**/*.py"
+      }
+    ],
+    "beforeShellExecution": [
+      {
+        "command": "./scripts/validate-shell.sh",
+        "matcher": "rm\\s+-rf|curl\\s+.*\\|\\s*sh|wget\\s+.*\\|\\s*sh"
+      }
+    ],
+    "sessionEnd": [
+      {
+        "command": "./scripts/audit.sh"
+      }
+    ]
+  }
+}

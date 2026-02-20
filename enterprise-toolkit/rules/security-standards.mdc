@@ -1,0 +1,16 @@
+---
+description: Security standards for code - injection, auth, secrets, crypto
+alwaysApply: false
+globs: "**/*.{ts,tsx,js,jsx,py,go,java}"
+---
+
+# Security standards
+
+When writing or reviewing code, enforce these practices:
+
+1. **Injection**: Never concatenate user input into SQL, shell commands, or HTML. Use parameterized queries, safe APIs, and output encoding.
+2. **Authentication and authorization**: Verify identity and permissions on every sensitive operation. Prefer established libraries (e.g. OAuth2, JWT validation).
+3. **Secrets**: Never commit API keys, passwords, or tokens. Use environment variables or secret managers. Do not log or expose secrets in errors.
+4. **Cryptography**: Use standard libraries and algorithms (e.g. bcrypt/argon2 for hashing, TLS for transport). Avoid custom crypto.
+5. **Input validation**: Validate and sanitize all external input. Enforce allowlists and bounds where possible.
+6. **Dependencies**: Keep dependencies updated. Check for known vulnerabilities (e.g. npm audit, dependabot).
