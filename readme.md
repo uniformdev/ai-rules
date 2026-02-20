@@ -1,25 +1,63 @@
-# Uniform rules for AI-assisted development
+# Cursor Marketplace – AI Rules
 
-This is the library of Uniform-specific rules to help your LLM tools work better with Uniform.
-Feeding these rules to your LLM will help it understand the context of the project and the specific requirements of Uniform.
+This repository is a **Cursor marketplace**: a multi-plugin repo that can be submitted to the Cursor marketplace so others can install the plugins.
 
-## How to install
+## Structure
 
-Run this command and follow the prompt:
-```bash
-npx @uniformdev/cli ai rules install
+```
+cursor-marketplace/
+├── .cursor-plugin/
+│   └── marketplace.json       # Marketplace manifest (lists plugins)
+├── uniform-rules/             # Plugin: Uniform CMS rules
+│   ├── .cursor-plugin/
+│   │   └── plugin.json
+│   ├── rules/
+│   │   ├── uniform.mdc
+│   │   ├── uniform-sdk.mdc
+│   │   ├── uniform-sveltekit.mdc
+│   │   ├── uniform-next-app-router.mdc
+│   │   ├── uniform-next-page-router.mdc
+│   │   └── uniform-mesh.mdc
+│   └── README.md
+├── enterprise-toolkit/        # Plugin: Security, compliance, automation
+│   ├── .cursor-plugin/
+│   │   └── plugin.json
+│   ├── rules/
+│   ├── skills/
+│   ├── agents/
+│   ├── commands/
+│   ├── hooks/
+│   ├── .mcp.json
+│   ├── assets/
+│   ├── scripts/
+│   └── README.md
+└── README.md
 ```
 
-## Must have rules for solution development:
-- [`rules/uniform.mdc`](./rules/uniform.mdc) - describes the core principles and concepts of Uniform
-- [`rules/uniform-sdk.mdc`](./rules/uniform-sdk.mdc) - describes the Uniform SDK and its capabilities
+## Plugins
 
-## Must-have rules for Uniform mesh app (custom integration) development
-- [`rules/uniform-mesh.mdc`](./rules/uniform-mesh.mdc)
+| Plugin              | Description |
+|---------------------|-------------|
+| **uniform-rules**   | Uniform CMS rules for compositions, components, patterns, SDK, SvelteKit, Next.js, Mesh. |
+| **enterprise-toolkit** | Rules, skills, agents, commands, hooks, and optional MCP for security, compliance, and automation. |
 
-## Framework-specific rules:
-- [`rules/uniform-next-page-router.mdc`](./rules/uniform-next-page-router.mdc) - for Next.js Page Router
-- [`rules/uniform-next-app-router.mdc`](./rules/uniform-next-app-router.mdc) - for Next.js App Router
+## Submitting to the Cursor marketplace
 
-### Optional rules:
-The rules files under [`rules/optional-personal-preferences`](./rules/optional-personal-preference/) contain non-essential rules that contain alternative defaults, highly recommended to review those and adjust to your liking.
+1. Push this repo (or the `cursor-marketplace` folder as its own repo) to a **public** Git host.
+2. Go to [cursor.com/marketplace/publish](https://cursor.com/marketplace/publish) and submit the repository URL.
+3. Ensure:
+   - Each plugin has a valid `.cursor-plugin/plugin.json` with a unique `name` (lowercase, kebab-case).
+   - All rules/skills/agents/commands have proper frontmatter.
+   - Paths in manifests are relative and valid.
+   - You have tested the plugins locally.
+
+## Local use
+
+To use as a local marketplace or single plugin:
+
+- **Multi-plugin**: Point Cursor at the root of `cursor-marketplace` (where `.cursor-plugin/marketplace.json` lives).
+- **Single plugin**: Point Cursor at `cursor-marketplace/uniform-rules` or `cursor-marketplace/enterprise-toolkit`.
+
+## License
+
+See repository license. Plugin manifests may specify their own license.
