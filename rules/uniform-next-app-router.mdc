@@ -3,332 +3,595 @@ description: Rules for Uniform SDK for Next.js App Router
 globs:
 alwaysApply: true
 ---
+# Uniform React Next.js App Router SDK Developer Reference
 
-# Uniform React Next App Router Developer Reference
-
-This document details how to use Uniform with React.js with Next App Router.
+This document details how to use Uniform SDK with React.js and Next.js App Router.
 
 @uniform.mdc describes general Uniform principles and practices.
 @uniform-sdk.mdc describes framework-agnostic developer principles.
 
-### Required npm packages
+## Required npm packages (version 20.58.0 or later)
 
-The following npm packages must be installed to wire Uniform to Next App Router:
+```json
+{
+   "@uniformdev/next-app-router": "20.58.0",
+   "@uniformdev/context": "20.58.0",
+}
+```
 
-@uniformdev/canvas-next-rsc
-@uniformdev/canvas
+## File Structure
 
-### Uniform server config
+Required file structure:
 
-A file names `uniform.server.config.js` should exist in the root of the Next.js project with the following content:
+```
+app/
+├── api/
+│   └── preview/
+│       └── route.ts           # Preview handler
+├── layout.tsx                 # Root layout
+├── uniform/
+│   └── [code]/
+│       └── page.tsx           # Main composition route
+└── playground/
+    └── [code]/
+        └── page.tsx           # Playground route
+middleware.ts                  # Required for edge personalization
+uniform.server.config.ts       # Server configuration
+next.config.ts                 # Next.js config with withUniformConfig
+```
 
-```js
-/** @type {import('@uniformdev/canvas-next-rsc/config').UniformServerConfig} */
-module.exports = {
+## Server Configuration
+
+### uniform.server.config.ts is optional now:
+
+```ts
+import { UniformServerConfig } from "@uniformdev/next-app-router/config";
+
+const config: UniformServerConfig = {
   defaultConsent: true,
-  evaluation: {
-    personalization: "hybrid",
+  playgroundPath: "/playground"
+};
+
+export default config;
+```
+
+Full configuration options:
+
+```ts
+const config: UniformServerConfig = {
+  // Default storage consent for new visitors
+  defaultConsent: true,
+  
+  // Path to playground page
+  playgroundPath: "/playground",
+  
+  // ETag support for caching
+  eTags: {
+    generateETags: true,
+    cacheControl: "no-cache, must-revalidate",
   },
-  experimental: {
-    quirkSerialization: true,
+  
+  // Context options
+  context: {
+    disableDevTools: false,
   },
+  
+  // Quirk and middleware options
+  quirkSerialization: true,
+  middlewareRuntimeCache: true,
+  disableSwrMiddlewareCache: false,
 };
 ```
 
-### Enable Uniform server config
+### next.config.ts
 
-To make the configuration available in Next.js, modify the next.config.js file in the root of the project and add in `withUniformConfig`:
+```ts
+import { withUniformConfig } from "@uniformdev/next-app-router/config";
+import type { NextConfig } from "next";
 
-```js
-const { withUniformConfig } = require("@uniformdev/canvas-next-rsc/config");
-
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  reactStrictMode: true,
+const nextConfig: NextConfig = {
+  // your Next.js config options
 };
 
-module.exports = withUniformConfig(nextConfig);
+export default withUniformConfig(nextConfig);
 ```
 
-### Fetching and rendering the composition
+## Middleware (Required)
 
-In your dynamic route file (`app/[[...path]]/page.{tsx|jsx}`), it is necessary to fetch the Uniform composition instance for the current route.
+Middleware in `middleware.ts` at project root is required.
+
+**IMPORTANT for Next.js 16:** To support Uniform preview in Canvas:
+1. The middleware file **MUST** be named `middleware.ts` (not `proxy.ts` or other names)
+2. **MUST** export the runtime value:
+
+```ts
+export const runtime = 'experimental-edge';
+```
+
+### Basic middleware
+
+```ts
+import { uniformMiddleware } from "@uniformdev/next-app-router/middleware";
+
+export default uniformMiddleware();
+
+// Required for Next.js 16 preview support
+export const runtime = 'experimental-edge';
+```
+
+### Middleware with locale handling
+
+```ts
+import { uniformMiddleware } from "@uniformdev/next-app-router/middleware";
+
+const defaultLocale = "en";
+const locales = ["en"];
+
+export default uniformMiddleware({
+  rewriteRequestPath: async ({ url }) => ({
+    path: formatPath(url.pathname, defaultLocale),
+  }),
+});
+
+const formatPath = (path: string, locale?: string | null): string => {
+  if (!locale) return path;
+  if (isLocaleInPath(path)) return path;
+  return `/${locale}${path}`;
+};
+
+const isLocaleInPath = (path: string): boolean => {
+  const [firstSegment] = path.split("/").filter(Boolean);
+  return firstSegment
+    ? (locales as string[]).some((locale) => locale === firstSegment)
+    : false;
+};
+
+// Required for Next.js 16 preview support
+export const runtime = 'experimental-edge';
+```
+
+### Full middleware options
+
+```ts
+import { uniformMiddleware } from "@uniformdev/next-app-router/middleware";
+
+export default uniformMiddleware({
+  // Rewrite request path before route resolution
+  rewriteRequestPath: async ({ url, request }) => ({
+    path: url.pathname,
+    keys: { locale: "en" },  // Custom keys passed to composition
+  }),
+  
+  // Rewrite destination after evaluation
+  rewriteDestinationPath: async ({ code, pageState, source }) => {
+    return `/uniform/${code}`;
+  },
+  
+  // Paths that should precompute personalizations
+  pathPatternsWithVariations: ["/products/*"],
+  
+  // Content release
+  release: { id: "release-123" },
+  
+  // Custom quirks to inject
+  quirks: { customQuirk: "value" },
+  
+  // Override default consent
+  defaultConsent: true,
+});
+
+// Required for Next.js 16 preview support
+export const runtime = 'experimental-edge';
+```
+
+## Main Composition Route
+
+`app/uniform/[code]/page.tsx`:
 
 ```tsx
 import {
+  resolveRouteFromCode,
   UniformComposition,
-  PageParameters,
-  retrieveRoute,
-} from "@uniformdev/canvas-next-rsc";
-import { resolveComponent } from "@/uniform/resolve";
+  UniformPageParameters,
+  createUniformStaticParams,
+} from "@uniformdev/next-app-router";
+import { resolveComponent } from "@/components/resolveComponent";
 
-export default async function Page(props: PageParameters) {
-  const route = await retrieveRoute(props);
+// Enable ISR (Incremental Static Regeneration)
+export const generateStaticParams = async () => {
+  return createUniformStaticParams({
+    // paths: ["/"],
+    // Important: for localized sites, you need to add the locales to the paths
+    paths: ["/en"],
+  });
+};
+
+export default async function UniformPage(props: UniformPageParameters) {
+  const { code } = await props.params;
   return (
-    <>
-      <UniformComposition
-        {...props}
-        route={route}
-        resolveComponent={resolveComponent}
-        mode="server"
-      />
-    </>
+    <UniformComposition
+      code={code}
+      resolveRoute={resolveRouteFromCode}
+      resolveComponent={resolveComponent}
+      clientContextComponent={CustomUniformClientContext}
+    />
   );
 }
 ```
 
-### Wrapping page in Uniform Context
+**Key points:**
+- `UniformContext` is self-closing and placed in page.tsx (not layout.tsx)
+- `UniformContext` must be wrapped in `Suspense`
+- Spread `{...result}` to `UniformComposition`
 
-In order for personalization and A/B testing functionality to work client side, we must wrap the entire page in the UniformContext component. This should modify `app/layout.tsx` and wrap `{children}`.
+## Playground Route
+
+`app/playground/[code]/page.tsx`:
 
 ```tsx
-import { UniformContext } from "@uniformdev/canvas-next-rsc";
+import {
+  createUniformPlaygroundStaticParams,
+  PlaygroundParameters,
+  resolvePlaygroundRoute,
+  UniformPlayground,
+} from "@uniformdev/next-app-router";
+
+import { resolveComponent } from "@/components/resolveComponent";
+
+export const generateStaticParams = async () => {
+  return createUniformPlaygroundStaticParams({
+    paths: ["/en"],
+  });
+};
+
+export default async function PlaygroundPage({ params }: PlaygroundParameters) {
+  const { code } = await params;
+  return (
+    <UniformPlayground
+      code={code}
+      resolveRoute={resolvePlaygroundRoute}
+      resolveComponent={resolveComponent}
+    />
+  );
+}
+```
+
+## Root Layout
+
+`app/layout.tsx` - does NOT include UniformContext:
+
+```tsx
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "My App",
+  description: "My description",
+};
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <html lang="en">
-      <body>
-        <main className="main">
-          <UniformContext>{children}</UniformContext>
-        </main>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
 ```
 
-### Rendering Uniform Components using React Components
+## Component Resolution
 
-The `UniformComposition` component needs to know how to map a Uniform Component instance's `type` to a React component that implements the UI for that component. This is done using resolveComponent. To use the component registry, first create a component:
+`components/resolveComponent.ts`:
 
-```tsx
-export const HeaderComponent = () => {
-  return <>Header</>;
-};
-```
-
-Then register it in the resolveComponent function:
-
-```tsx
+```ts
 import {
-  DefaultNotImplementedComponent,
   ResolveComponentFunction,
-  ResolveComponentResult,
-} from "@uniformdev/canvas-next-rsc/component";
-import { HeaderComponent } from "@/components/header";
+  type ResolveComponentResult,
+} from "@uniformdev/next-app-router";
+
+import { DefaultNotFoundComponent } from "./default";
+import { HeroComponent } from "./hero";
+import { PageComponent } from "./page";
 
 export const resolveComponent: ResolveComponentFunction = ({ component }) => {
-  let result: ResolveComponentResult = {
-    component: DefaultNotImplementedComponent,
-  };
+  let result: ResolveComponentResult | undefined;
 
-  if (component.type === "header") {
-    result = {
-      component: HeaderComponent,
-    };
+  if (component.type === "page") {
+    result = { component: PageComponent };
+  } else if (component.type === "hero") {
+    result = { component: HeroComponent };
   }
 
-  return result;
+  return result || { component: DefaultNotFoundComponent };
 };
 ```
 
-#### Mapping Uniform Components to React Components
-
-React components that receive Uniform Component data are passed props that correspond to the shape of the component definition they render. The `ComponentProps` type can be used to make the mapping explicit:
+Default fallback component:
 
 ```tsx
-import { ComponentProps } from "@uniformdev/canvas-next-rsc/component";
-import {
-  AssetParamValue,
-  LinkParamValue,
-  RichTextParamValue,
-} from "@uniformdev/canvas";
+import { ComponentProps } from "@uniformdev/next-app-router/component";
 
-type HeaderParameters = {
-  textParameter?: string;
-  richTextParameter?: RichTextParamValue;
-  linkParameter?: LinkParamValue;
-  assetParameter?: AssetParamValue;
-  // it is critical that all parameter props values are optional, because they can be undefined - even if 'required' on the component definition
-};
-
-type HeaderProps = ComponentProps<HeaderParameters>;
-
-export const HeaderComponent = ({ textParameter }: HeaderProps) => {
-  return (
-    <>
-      <span>{textParameter}</span>
-    </>
-  );
+export const DefaultNotFoundComponent = ({ type }: ComponentProps) => {
+  return <div>Not Found: {type}</div>;
 };
 ```
 
-#### Accessing parameters
+## Component Props and Parameters
 
-IMPORTANT: When accessing component parameters, never use this way of accessing parameter values: `component?.parameters?.<parameter_name>.value`. While it works, there is a better way of destructuring the parameter name on props and accessing it directly as shown in the example below:
+**CRITICAL:**
+1. Parameter types must be wrapped with `ComponentParameter<T>`
+2. Parameters are accessed via the `parameters` object
+3. All parameters MUST be optional (use `?`) - they can be undefined even if marked required in definition
+
+### Component example with parameters
 
 ```tsx
 import {
+  ComponentParameter,
   ComponentProps,
   UniformText,
-} from "@uniformdev/canvas-next-rsc/component";
+  UniformRichText,
+} from "@uniformdev/next-app-router/component";
 
-import {
-  LinkParamValue,
-} from "@uniformdev/canvas";
-
-type ComponentParameters = {
-  icon?: string;
-  label?: string;
-  link?: LinkParamValue;
+export type HeroProps = {
+  title?: ComponentParameter<string>;
+  description?: ComponentParameter<string>;
 };
 
-export const ComponentName = ({
-  link,
-  icon,
-  label,
+export const HeroComponent = ({
+  parameters: { title, description },
   component,
-  context,
-}: ComponentProps<ComponentParameters>) => {
-  return (
-    <a href={link.path} aria-label={label}>
-      {icon}
-    </a>
-  );
-};
-```
-
-#### Rendering child slots
-
-If a Uniform Component definition has slots defined, the components in those slots can be rendered using the `UniformSlot` component.
-
-```tsx
-import {
-  ComponentProps,
-  UniformSlot,
-} from "@uniformdev/canvas-next-rsc/component";
-import { RichTextParamValue } from "@uniformdev/canvas";
-
-type HeaderParameters = {
-  textParameter?: string;
-  richTextParameter?: RichTextParamValue;
-  // it is critical that all parameter props values are optional, because they can be undefined - even if 'required' on the component definition
-};
-type HeaderSlots = "logo" | "navigation";
-
-type HeaderProps = ComponentProps<HeaderParameters, HeaderSlots>;
-
-export const HeaderComponent = ({ slots, context, component }: HeaderProps) => {
-  return (
-    <>
-      <UniformSlot context={context} data={component} slot={slots.logo} />
-      <UniformSlot context={context} data={component} slot={slots.navigation} />
-    </>
-  );
-};
-```
-
-#### Rendering parameter values
-
-When rendering a `text` type parameter, using the `UniformText` component will enable authors to edit the value within the Uniform preview directly. Text parameters that do not have a visible component, such as alt text, should be rendered as their raw text value:
-
-```tsx
-import {
-  ComponentProps,
-  UniformText,
-} from "@uniformdev/canvas-next-rsc/component";
-import { RichTextParamValue } from "@uniformdev/canvas";
-
-type HeaderParameters = {
-  textParameter?: string;
-  richTextParameter?: RichTextParamValue;
-  // it is critical that all parameter props values are optional, because they can be undefined - even if 'required' on the component definition
-};
-
-type HeaderProps = ComponentProps<HeaderParameters>;
-
-export const HeaderComponent = ({ component, context }: HeaderProps) => {
+}: ComponentProps<HeroProps>) => {
   return (
     <>
       <UniformText
         component={component}
-        context={context}
-        parameterId="textParameter"
+        parameter={title}
+        className="title"
+        placeholder="Title goes here"
         as="h1"
       />
-    </>
-  );
-};
-```
-
-For rich text parameters, the `UniformRichText` component will automatically render the rich text stored as JSON to HTML:
-
-```tsx
-import {
-  ComponentProps,
-  UniformRichText,
-} from "@uniformdev/canvas-next-rsc/component";
-import { RichTextParamValue } from "@uniformdev/canvas";
-
-type HeaderParameters = {
-  textParameter?: string;
-  richTextParameter?: RichTextParamValue;
-  // it is critical that all parameter props values are optional, because they can be undefined - even if 'required' on the component definition
-};
-
-type HeaderProps = ComponentProps<HeaderParameters>;
-
-export const HeaderComponent = ({ component, context }: HeaderProps) => {
-  return (
-    <>
       <UniformRichText
         component={component}
-        context={context}
-        parameterId="richTextParameter"
+        parameter={description}
+        placeholder="Description goes here"
       />
     </>
   );
 };
 ```
 
-Note: asset parameters are rendered directly from props, there is no `UniformAsset` component.
+### Accessing raw parameter values
 
-##### Asset parameters/fields
+When not using UniformText (e.g., for non-visible values like alt text):
 
-1. CRITICAL: Always use `flattenValues` from `@uniformdev/canvas` for handling asset parameters, not custom utility functions.
-2. CRITICAL: Destructure asset parameters directly from component props (e.g., `{ logos, component, context }`) rather than accessing through `component?.parameters?.parameterName`.
-3. Use `flattenValues(assetParam)` directly - it handles both single and multiple assets automatically.
+```tsx
+const HeroComponent = ({ parameters: { title } }: ComponentProps<HeroProps>) => {
+  return <h1>{title?.value}</h1>;
+};
+```
+
+## Rendering Slots
+
+```tsx
+import { ComponentProps, UniformSlot } from "@uniformdev/next-app-router/component";
+
+export type PageProps = unknown;
+export type PageSlots = "content" | "header" | "footer";
+
+export const PageComponent = ({ slots }: ComponentProps<PageProps, PageSlots>) => {
+  return (
+    <>
+      <UniformSlot slot={slots.header} />
+      <UniformSlot slot={slots.content} />
+      <UniformSlot slot={slots.footer} />
+    </>
+  );
+};
+```
+
+### Custom slot rendering
+
+`UniformSlot` accepts a `children` render function:
+
+```tsx
+<UniformSlot slot={slots.content}>
+  {({ child, _id, key, slotName, slotIndex }) => (
+    <div key={key} data-id={_id} className="slot-wrapper">
+      {child}
+    </div>
+  )}
+</UniformSlot>
+```
+
+### getUniformSlot utility
+
+Alternative for extracting slot items as array:
+
+```tsx
+import { getUniformSlot } from "@uniformdev/next-app-router/component";
+
+const items = getUniformSlot({ slot: slots.content });
+// Returns ReactNode[] | undefined
+```
+
+### Accessing slot component data
+
+Use composition cache to access ComponentInstance data:
+
+```tsx
+import { createCompositionCache } from "@uniformdev/next-app-router";
+
+export const compositionCache = createCompositionCache();
+```
+
+Pass `compositionCache` as a prop to `UniformComposition` (see Main Composition Route above), then in components:
+
+```tsx
+const headerItems = slots.header.items.map((item) => {
+  const resolved = compositionCache.getUniformComponent({
+    componentId: item!._id,
+    compositionId: context._id,
+  });
+  return resolved;
+});
+```
+
+## Client Context and Quirks
+
+### useUniformContext hook
+
+For client-side context access and updates:
+
+```tsx
+"use client";
+
+import { useUniformContext } from "@uniformdev/next-app-router/component";
+import { useEffect, useState } from "react";
+
+export const QuirkButton = () => {
+  const { context } = useUniformContext();
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (context?.quirks !== undefined) {
+      setIsLoading(false);
+    }
+  }, [context?.quirks]);
+
+  const updateQuirk = async () => {
+    await context?.update({
+      quirks: {
+        country: "Canada",
+      },
+    });
+  };
+
+  return (
+    <button onClick={updateQuirk} disabled={isLoading}>
+      Update Quirk
+    </button>
+  );
+};
+```
+
+### useQuirks hook
+
+Reactive access to visitor quirk values:
+
+```tsx
+"use client";
+
+import { useQuirks } from "@uniformdev/next-app-router/component";
+
+export const LocationBanner = () => {
+  const quirks = useQuirks();
+  
+  return <div>Current country: {quirks?.country ?? "Unknown"}</div>;
+};
+```
+
+### useScores hook
+
+Reactive access to visitor score values:
+
+```tsx
+"use client";
+
+import { useScores } from "@uniformdev/next-app-router/component";
+
+export const InterestIndicator = () => {
+  const scores = useScores();
+  
+  return <div>Tech interest score: {scores?.tech ?? 0}</div>;
+};
+```
+
+### Custom Client Context Component
+
+For advanced configuration with plugins:
+
+```tsx
+"use client";
+
+import { ContextPlugin, enableContextDevTools } from "@uniformdev/context";
+import { useRouter } from "next/navigation";
+import {
+  createClientUniformContext,
+  useInitUniformContext,
+  ClientContextComponent,
+} from "@uniformdev/canvas-next-rsc-client-v2";
+
+export const CustomUniformClientContext: ClientContextComponent = ({
+  manifest,
+  disableDevTools,
+  defaultConsent,
+  experimentalQuirkSerialization,
+  compositionMetadata,
+}) => {
+  const router = useRouter();
+
+  useInitUniformContext(() => {
+    const plugins: ContextPlugin[] = [];
+
+    if (!disableDevTools) {
+      plugins.push(
+        enableContextDevTools({
+          onAfterMessageReceived: () => {
+            router.refresh();
+          },
+        })
+      );
+    }
+
+    return createClientUniformContext({
+      manifest,
+      plugins,
+      defaultConsent,
+      experimental_quirksEnabled: experimentalQuirkSerialization,
+    });
+  }, compositionMetadata);
+
+  return null;
+};
+```
+
+Pass to UniformContext:
+
+```tsx
+<UniformContext
+  result={result}
+  clientContextComponent={CustomUniformClientContext}
+/>
+```
+
+## Asset Parameters
+
+Use `flattenValues` from `@uniformdev/canvas`:
 
 ```tsx
 import { AssetParamValue, flattenValues } from "@uniformdev/canvas";
+import { ComponentParameter, ComponentProps } from "@uniformdev/next-app-router/component";
 
 interface MyComponentProps {
-  multipleImagesAssetParam: AssetParamValue;
-  singleImageAssetParam: AssetParamValue;
+  multipleImages?: ComponentParameter<AssetParamValue>;
+  singleImage?: ComponentParameter<AssetParamValue>;
 }
 
 function MyComponent({
-  multipleImagesAssetParam,
-  singleImageAssetParam,
-}: MyComponentProps) {
-  // when multiple assets are allowed, flatten to an array
-  const images = flattenValues(multipleImagesAssetParam);
-  // when only one asset is allowed, flatten to a single object
-  const image = flattenValues(singleImageAssetParam, { toSingle: true });
+  parameters: { multipleImages, singleImage },
+}: ComponentProps<MyComponentProps>) {
+  // Multiple assets: flatten to array
+  const images = flattenValues(multipleImages);
+  // Single asset: flatten to single object
+  const image = flattenValues(singleImage, { toSingle: true });
 
   return (
     <>
       {images?.map((img, index) => (
-        <img
-          key={index}
-          src={img?.url}
-          width={img?.width}
-          height={img?.height}
-        />
+        <img key={index} src={img?.url} width={img?.width} height={img?.height} />
       ))}
       <img src={image?.url} width={image?.width} height={image?.height} />
     </>
@@ -336,11 +599,9 @@ function MyComponent({
 }
 ```
 
-4. Do NOT create custom utility functions like `getAssetValues` when `flattenValues` already exists and works perfectly.
+**CRITICAL:** Always use `flattenValues` from `@uniformdev/canvas`. Do NOT create custom utility functions.
 
-### Configuring Contextual Editing Live Preview
-
-To enable contextual editing and live preview to operate within the Uniform application, we need to register a _preview handler_ and _playground page_. The preview handler is an API endpoint that Uniform invokes when preview starts. It is responsible for mapping the composition ID under preview to a redirect to the correct frontend route to display that composition. The default handler does this using project map hierarchy.
+## Preview Handler
 
 `app/api/preview/route.ts`:
 
@@ -349,33 +610,222 @@ import {
   createPreviewGETRouteHandler,
   createPreviewPOSTRouteHandler,
   createPreviewOPTIONSRouteHandler,
-} from "@uniformdev/canvas-next-rsc/handler";
+} from "@uniformdev/next-app-router/handler";
 
 export const GET = createPreviewGETRouteHandler({
-  playgroundPath: "/playground",
   resolveFullPath: ({ path }) => (path ? path : "/playground"),
 });
 export const POST = createPreviewPOSTRouteHandler();
 export const OPTIONS = createPreviewOPTIONSRouteHandler();
 ```
 
-The preview playground is a special route used to preview Uniform Patterns (reusable chunks of a page). It should use the same resolveComponent function. The playground route includes the global page shell of the application:
+## Server-Side Precomputation
 
-`app/playground/page.tsx`:
+Use `precomputeComposition` to evaluate tests and personalizations server-side:
 
 ```tsx
 import {
-  UniformPlayground,
-  UniformPlaygroundProps,
-} from "@uniformdev/canvas-next-rsc";
-import { resolveComponent } from "@/uniform/resolve";
+  resolveRouteFromCode,
+  UniformComposition,
+  UniformContext,
+  precomputeComposition,
+} from "@uniformdev/next-app-router";
 
-export default function PlaygroundPage(props: {
-  searchParams: UniformPlaygroundProps["searchParams"];
-}) {
-  return <UniformPlayground {...props} resolveComponent={resolveComponent} />;
+export default async function UniformPage(props: UniformPageParameters) {
+  const result = await resolveRouteFromCode(props);
+
+  if (!result.route) {
+    notFound();
+  }
+
+  // Optional: precompute tests and personalizations server-side
+  await precomputeComposition(result);
+
+  return (
+    <>
+      <Suspense fallback={null}>
+        <UniformContext result={result} />
+      </Suspense>
+      <UniformComposition {...result} resolveComponent={resolveComponent} />
+    </>
+  );
 }
 ```
+
+Options:
+
+```tsx
+await precomputeComposition({
+  pageState: result.pageState,
+  route: result.route,
+  evaluateTests: true,            // or function to filter
+  evaluatePersonalizations: true, // or function to filter
+});
+```
+
+## Server Clients
+
+Server-only clients for data access:
+
+```tsx
+import {
+  getCanvasClient,
+  getManifest,
+  getManifestClient,
+  getProjectMapClient,
+  getRouteClient,
+} from "@uniformdev/next-app-router";
+```
+
+### Examples
+
+```tsx
+// Route resolution
+const routeClient = getRouteClient({
+  cache: { type: "force-cache" },
+});
+
+// Composition access
+const canvasClient = getCanvasClient({
+  cache: { type: "no-cache" },
+});
+
+const composition = await canvasClient.getCompositionById({
+  compositionId: "abc123",
+  state: CANVAS_PUBLISHED_STATE,
+});
+
+// Manifest access
+import { CANVAS_PUBLISHED_STATE } from "@uniformdev/canvas";
+
+const manifest = await getManifest({
+  state: CANVAS_PUBLISHED_STATE,
+});
+```
+
+## Vercel Geo-IP Quirks
+
+Middleware automatically populates quirks from Vercel's geo-IP headers:
+
+| Header | Quirk Key |
+|--------|-----------|
+| `x-vercel-ip-country` | `vc-country` |
+| `x-vercel-ip-country-region` | `vc-region` |
+| `x-vercel-ip-city` | `vc-city` |
+
+Available for personalization rules without additional configuration on Vercel.
+
+## Type Definitions
+
+### ComponentProps
+
+```tsx
+type ComponentProps<
+  TParameters extends Record<string, ComponentParameter> | unknown,
+  TSlotNames extends string = string,
+> = {
+  type: string;                              // Component type
+  variant: string | undefined;               // Active variant ID
+  slots: Record<TSlotNames, SlotDefinition>; // Child slots
+  parameters: TParameters;                   // Parameter values
+  component: ComponentContext;               // Component metadata
+  context: CompositionContext;               // Composition context
+};
+```
+
+### ComponentContext
+
+```tsx
+type ComponentContext = {
+  _id: string;
+  _parentId: string | null;
+  slotName: string | undefined;
+  slotIndex: number | undefined;
+};
+```
+
+### CompositionContext
+
+```tsx
+type CompositionContext = {
+  _id: string;
+  type: string;
+  state: number;
+  isContextualEditing: boolean;
+  matchedRoute: string;
+  dynamicInputs: Record<string, string>;
+  pageState: PageState;
+};
+```
+
+### SlotDefinition
+
+```tsx
+type SlotDefinition = {
+  name: string;
+  items: ({
+    _id: string;
+    $pzCrit: VariantMatchCriteria | undefined;  // Personalization criteria
+    variantId: string | undefined;               // For test/personalization variants
+    component: ReactNode;
+  } | null)[];
+};
+```
+
+### ComponentParameter
+
+```tsx
+type ComponentParameter<TValue = unknown> = BaseComponentParameter<TValue> & {
+  parameterId: string;
+  _contextualEditing?: { isEditable: boolean };
+};
+```
+
+## Uniform Manifest
+
+**CRITICAL!** For Next.js App Router, include these commands in package.json:
+
+```json
+{
+  "scripts": {
+    "uniform:push": "uniform sync push",
+    "uniform:publish": "uniform context manifest publish"
+  }
+}
+```
+
+- `uniform:publish` is **REQUIRED** for App Router
+- Run after pushing content or component definition changes
+
+## Quick Reference: Import Paths
+
+| Category | Export | Import Path |
+|----------|--------|-------------|
+| **Core** | `UniformComposition`, `UniformContext`, `UniformPlayground` | `@uniformdev/next-app-router` |
+| **Core** | `resolveRouteFromCode`, `resolvePlaygroundRoute`, `precomputeComposition` | `@uniformdev/next-app-router` |
+| **Core** | `createUniformStaticParams`, `createCompositionCache` | `@uniformdev/next-app-router` |
+| **Core** | `ResolveComponentFunction`, `ResolveComponentResult` | `@uniformdev/next-app-router` |
+| **Clients** | `getCanvasClient`, `getRouteClient`, `getManifest`, `getManifestClient`, `getProjectMapClient` | `@uniformdev/next-app-router` |
+| **Components** | `UniformSlot`, `UniformText`, `UniformRichText`, `getUniformSlot` | `@uniformdev/next-app-router/component` |
+| **Types** | `ComponentProps`, `ComponentParameter`, `ComponentContext` | `@uniformdev/next-app-router/component` |
+| **Hooks** | `useUniformContext`, `useQuirks`, `useScores` | `@uniformdev/next-app-router/component` |
+| **Middleware** | `uniformMiddleware`, `handleUniformRoute` | `@uniformdev/next-app-router/middleware` |
+| **Config** | `withUniformConfig`, `UniformServerConfig` | `@uniformdev/next-app-router/config` |
+| **Handlers** | `createPreviewGETRouteHandler`, `createPreviewPOSTRouteHandler`, `createPreviewOPTIONSRouteHandler` | `@uniformdev/next-app-router/handler` |
+| **Client** | `createClientUniformContext`, `useInitUniformContext`, `ClientContextComponent` | `@uniformdev/canvas-next-rsc-client-v2` |
+| **Canvas** | `flattenValues`, `AssetParamValue`, `LinkParamValue`, `RichTextParamValue` | `@uniformdev/canvas` |
+
+## Best Practices
+
+1. **Always use TypeScript** - SDK is TypeScript-first
+2. **Enable edge middleware** - Set `middlewareRuntimeCache: true` for best performance
+3. **Use ISR** - Configure `generateStaticParams()` for optimal performance
+4. **Type all parameters** - Use `ComponentParameter<T>` wrappers
+5. **Mark parameters optional** - Always use `?` for parameter types
+6. **Client components sparingly** - Use `"use client"` only when necessary (quirks, interactivity)
+7. **UniformContext in page.tsx** - Wrapped in Suspense, with result prop
+8. **Use reactive hooks** - `useQuirks()` and `useScores()` for client-side personalization state
+9. **Leverage Vercel geo-IP** - Free personalization by location on Vercel deployments
 
 ## Uniform manifest usage
 
