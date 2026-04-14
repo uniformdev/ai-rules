@@ -10,12 +10,12 @@ This document details how to use Uniform SDK with React.js and Next.js App Route
 @uniform.mdc describes general Uniform principles and practices.
 @uniform-sdk.mdc describes framework-agnostic developer principles.
 
-## Required npm packages (version 20.48.0 or later)
+## Required npm packages (version 20.58.0 or later)
 
 ```json
 {
-   "@uniformdev/next-app-router": "20.48.0",
-   "@uniformdev/context": "20.48.0",
+   "@uniformdev/next-app-router": "20.58.0",
+   "@uniformdev/context": "20.58.0",
 }
 ```
 
@@ -65,11 +65,6 @@ const config: UniformServerConfig = {
   // Path to playground page
   playgroundPath: "/playground",
   
-  // Cache settings for different data types
-  manifestCache: { type: "force-cache" },
-  canvasCache: { type: "revalidate", interval: 60 },
-  projectMapCache: { type: "force-cache" },
-  
   // ETag support for caching
   eTags: {
     generateETags: true,
@@ -81,12 +76,10 @@ const config: UniformServerConfig = {
     disableDevTools: false,
   },
   
-  // Experimental features
-  experimental: {
-    quirkSerialization: true,
-    middlewareRuntimeCache: true,
-    disableSwrMiddlewareCache: false,
-  },
+  // Quirk and middleware options
+  quirkSerialization: true,
+  middlewareRuntimeCache: true,
+  disableSwrMiddlewareCache: false,
 };
 ```
 
@@ -434,17 +427,7 @@ import { createCompositionCache } from "@uniformdev/next-app-router";
 export const compositionCache = createCompositionCache();
 ```
 
-Pass to UniformComposition:
-
-```tsx
-<UniformComposition
-  {...result}
-  resolveComponent={resolveComponent}
-  compositionCache={compositionCache}
-/>
-```
-
-Then in components:
+Pass `compositionCache` as a prop to `UniformComposition` (see Main Composition Route above), then in components:
 
 ```tsx
 const headerItems = slots.header.items.map((item) => {

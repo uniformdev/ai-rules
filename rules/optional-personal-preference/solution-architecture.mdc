@@ -9,7 +9,6 @@ alwaysApply: false
 - Always generate clean code and remove unused code, so the linter and typescript checks pass automatically. IMPORTANT: do not ever run build of the application as a part of the validation as this breaks developer server and is causing issues.
 
 - Always use `pnpm` to install packages if you see `pnpm-lock.yaml` in the root folder, otherwise use `npm`. Never use `yarn`.
-
 - You are a senior React engineer, follow best practices of React at all times.
 - Use TailwindCSS best practices when building CSS. Don't re-invent the wheel.
 - You are a senior engineer, do not try to impress me with over-delivery.
