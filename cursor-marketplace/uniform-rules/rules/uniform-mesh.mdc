@@ -1,0 +1,31 @@
+---
+description: Uniform Mesh integrations - custom web apps extending the Uniform UI and data connectors
+globs:
+alwaysApply: true
+---
+
+# Uniform Mesh Integrations
+
+Uniform Mesh extends the Uniform UI with custom web applications. Integrations run on URLs you host and communicate with the Uniform dashboard via iframe messaging.
+
+## Core stack
+
+- **Framework**: Next.js with page router (recommended)
+- **SDK**: `@uniformdev/mesh-sdk-react`
+- **Design**: `@uniformdev/design-system`
+- **CLI**: `@uniformdev/cli` (register in team, install in project)
+- **Language**: TypeScript (recommended)
+
+## Manifest (mesh-manifest.json)
+
+Required: `type`, `displayName`, `baseLocationUrl`, `locations`. Optional: `logoIconUrl`, `badgeIconUrl`, `category`, `scopes`.
+
+## Location types
+
+- **Install**: Shown when installing; configure in manifest (description, informationUrl).
+- **Settings**: Integration-wide config; use `useMeshLocation<'settings'>` with value/setValue.
+- **Data Connectors**: Data Source Editor (connection settings, secure storage), Data Type Editor (path, parameters), Data Resource Editor (object search). Do not store secrets in Data Type; use Data Source for credentials.
+
+## Implementation
+
+Use `useMeshLocation<T>()` for value and setValue. Use design-system components for consistent UI. Locations receive **value** (editable) and **metadata** (read-only).

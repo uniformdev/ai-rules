@@ -1,0 +1,13 @@
+---
+description: Consistent code style and cleanup
+alwaysApply: true
+globs:
+---
+
+# Code style
+
+- Prefer `const` over `let` for variables that are never reassigned.
+- Remove unused code and imports so linters and type checks pass.
+- Use the project's existing style (indentation, quotes, semicolons). When in doubt, match surrounding code.
+- Keep functions and files focused; avoid unnecessary abstraction.
+- Add comments in English when non-obvious logic needs explanation.

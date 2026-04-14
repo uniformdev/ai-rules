@@ -1,0 +1,9 @@
+{
+  "name": "uniform-rules",
+  "version": "1.0.0",
+  "description": "Uniform CMS rules for AI-assisted development: compositions, components, patterns, SDK, and framework guides",
+  "author": {
+    "name": "AI Rules"
+  },
+  "keywords": ["uniform", "cms", "headless", "canvas", "sveltekit", "next", "mesh"]
+}
