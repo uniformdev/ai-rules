@@ -96,7 +96,17 @@ Conventionally these commands are registered as package scripts to make it unnec
 
 CRITICAL, NEVER IGNORE THIS RULE: never use or manipulate in any way (create, read, update, or delete) yaml or json files that represent Uniform data (placed typically in the "uniform-data" folder) when trying to create, modify, delete components, content types, or any other Uniform entity. Instead, always use Uniform MCP tool that is registered. If you cannot resolve a Uniform MCP Server or any MCP action, return a graceful message to the user and abort.
 
-IMPORTANT: execute "npm run uniform:pull" after making any changes to Uniform data via MCP Server. This ensures you have the latest representation of the Uniform data on disk.
+IMPORTANT: if the project uses CLI sync to mirror Uniform entities to disk (i.e. it has a `uniform-data` folder or a `uniform:pull` script), execute `npm run uniform:pull` after making changes via the Uniform MCP server. This keeps the on-disk representation in sync. Projects that do not use CLI sync (most App Router projects) do not need this step.
+
+## Installing the Uniform MCP server
+
+The Uniform CLI can configure the Uniform MCP server for common AI agents:
+
+```bash
+npx @uniformdev/cli ai mcp install
+```
+
+This installs into `mcp.json` (Cursor/Copilot/other) or `.mcp.json` (Claude Code/Desktop). Supports both interactive and non-interactive (`--team`, `--project`, `--apiKey`) modes.
 
 #### Getting Uniform CLI help
 
