@@ -372,7 +372,6 @@ The following Uniform features cannot currently be changed using MCP. If asked t
 - Release lifecycle actions (locking, launching, scheduling); editing content in a release other than the user's current release context without confirmation
 - Accessing published content or triggering publishing (all content read/written is in the draft state)
 - Managing workflows, or transitioning compositions, entries, or patterns between workflow stages
-- Creating, uploading, editing, or deleting assets (referencing existing assets in an asset-typed field/parameter IS supported)
 - Creating new editions of compositions or entries (reading and editing existing editions IS supported)
 - Monitoring results of an A/B test or personalization after creation
 - Changing user permissions, team settings, or anything billing/licensing/AI credit related
