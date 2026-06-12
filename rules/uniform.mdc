@@ -182,17 +182,24 @@ On a pattern instance, `_patternDataResources` reflects the data resources as de
 
 ### Uniform assets
 
-Media files that are used in Uniform compositions and entries are called _Assets_ and are managed in the _Asset Library_. Mesh integrations can extend the Asset Library to allow for custom asset sources like external DAM systems or asset repositories (like Unsplash, Getty Images, etc).
+Media files that are used in Uniform compositions and entries are called _Assets_ and are managed in the _Asset Library_. Mesh integrations can extend the Asset Library to allow for custom asset sources like external DAM systems or asset repositories (like Unsplash, Getty Images, etc). Custom asset sources can be previewed in the asset library but they are not available via Uniform asset APIs. Instead, they are part of the entry/composition payload when embedded by the authors.
 
-#### Asset attributes
+#### Asset attributes inside of asset library (Uniform only)
 
-- _public id_ - the asset's unique identifier
+- _id_ - the asset's unique identifier
 - _type_ - the asset's type, one of 'image', 'video', 'audio', 'document', 'other'
-- _source_ - such as 'uniform-assets' or an identifier specific to a Mesh integration
 - _fields_ - the asset's metadata, such as the title, description, file, url, focal point coordinates, dimensions, etc
-- _overrides_ - only for 'uniform-assets', used to provide a local override of a field (for example, when translating a title/description of an asset inside a localized field)
 
-Some fields are derived from the file attached to the asset (file ID, url, size, width/height etc.). Asset type is auto assigned on save based on file type.
+Some fields are derived from the file attached to the asset (file ID, url, size, width/height etc.). Asset type is auto assigned based on file type.
+
+#### Asset attributes inside of compositions and entries
+
+- __id_ - a random uuid of an asset parameter array instance
+- _type_ - the asset's type, one of 'image', 'video', 'audio', 'document', 'other'
+- _source_ - 'uniform-assets' for Uniform asset library assets, 'custom-url' for direct URL embeds, or an identifier specific to a Mesh integration
+- _fields.id_ - the id of the original asset; for source='uniform-assets' it would be the public ID of the asset in the asset library
+- _fields_ - the asset's metadata, such as the title, description, file, url, focal point coordinates, dimensions, etc
+- _overrides_ - only for 'uniform-assets', used to provide a local override of a field (for example, when translating a title/description of an asset inside a localized field); for non-Uniform assets those go into fields directly
 
 ### Localization
 
