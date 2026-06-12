@@ -187,9 +187,12 @@ Media files that are used in Uniform compositions and entries are called _Assets
 #### Asset attributes
 
 - _public id_ - the asset's unique identifier
-- _type_ - the asset's type, such as 'image', 'video', 'audio', 'document', 'other'
+- _type_ - the asset's type, one of 'image', 'video', 'audio', 'document', 'other'
 - _source_ - such as 'uniform-assets' or an identifier specific to a Mesh integration
 - _fields_ - the asset's metadata, such as the title, description, file, url, focal point coordinates, dimensions, etc
+- _overrides_ - only for 'uniform-assets', used to provide a local override of a field (for example, when translating a title/description of an asset inside a localized field)
+
+Some fields are derived from the file attached to the asset (file ID, url, size, width/height etc.). Asset type is auto assigned on save based on file type.
 
 ### Localization
 
